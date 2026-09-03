@@ -22,7 +22,7 @@ Canopy is an opinionated deployment dashboard built on top of [Trellis](https://
 
 ### On Trellis
 
-The `trellis.yml` below includes a bundled Postgres container so you can get running without an external database. It's fine for a demo; for production, replace the `db` task group with a managed database and store the connection string as a secret.
+The `trellis.yml` below includes a bundled Postgres container so you can get running without an external database. It uses host networking and assumes both task groups land on the same node, so it works as-is on a single-node cluster. For multi-node clusters, replace the `db` task group with an external database and store the connection string as a Trellis secret instead. For a demo, data persists across container crashes but is lost if the allocation is replaced.
 
 #### 1. Create the namespace and encryption key secret
 
@@ -59,6 +59,9 @@ task_groups:
           POSTGRES_USER: canopy
           POSTGRES_PASSWORD: canopy
           POSTGRES_DB: canopy
+        volumes:
+          - name: pgdata
+            path: /var/lib/postgresql/data
         health_check:
           type: script
           command: ["pg_isready", "-U", "canopy"]
@@ -67,7 +70,7 @@ task_groups:
           threshold: 3
 
   - name: web
-    count: 2
+    count: 1
     update:
       strategy: rolling
       max_parallel: 1
