@@ -1,4 +1,5 @@
 import { redirect, notFound } from 'next/navigation'
+import Link from 'next/link'
 import { Layers, Plus } from 'lucide-react'
 import { getCurrentUser } from '@/lib/auth'
 import {
@@ -61,26 +62,28 @@ export default async function ProjectServicesPage({
       ) : (
         <div className="space-y-3">
           {serviceList.map((svc) => (
-            <Card key={svc.id} className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted">
-                    <Layers className="h-4 w-4 text-muted-foreground" />
+            <Link key={svc.id} href={`/projects/${slug}/services/${svc.slug}`}>
+              <Card className="group p-4 transition-colors hover:border-primary/40">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted">
+                      <Layers className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium group-hover:text-primary transition-colors">{svc.name}</h3>
+                      <p className="text-xs text-muted-foreground">{svc.slug}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-medium">{svc.name}</h3>
-                    <p className="text-xs text-muted-foreground">{svc.slug}</p>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${typeColors[svc.type] ?? typeColors.custom}`}
+                    >
+                      {svc.type}
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${typeColors[svc.type] ?? typeColors.custom}`}
-                  >
-                    {svc.type}
-                  </span>
-                </div>
-              </div>
-            </Card>
+              </Card>
+            </Link>
           ))}
         </div>
       )}

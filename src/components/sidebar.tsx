@@ -12,6 +12,9 @@ import {
   PanelLeftClose,
   PanelLeft,
   X,
+  Users,
+  ClipboardList,
+  Key,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -31,6 +34,9 @@ const mainNav: NavItem[] = [
 
 const settingsNav: NavItem[] = [
   { label: "Organization", href: "/settings/organization", icon: Building2 },
+  { label: "Teams", href: "/settings/organization/teams", icon: Users },
+  { label: "API Keys", href: "/settings/organization/api-keys", icon: Key },
+  { label: "Audit Log", href: "/settings/organization/audit", icon: ClipboardList },
   { label: "Account", href: "/settings/account", icon: User },
 ];
 

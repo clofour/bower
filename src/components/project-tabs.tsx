@@ -8,6 +8,7 @@ const tabs = [
   { label: 'Services', href: '' },
   { label: 'Environments', href: '/environments' },
   { label: 'Routes', href: '/routes' },
+  { label: 'Secrets', href: '/secrets' },
   { label: 'Deployments', href: '/deployments' },
   { label: 'Settings', href: '/settings' },
 ]
@@ -23,7 +24,7 @@ export function ProjectTabs({ slug }: { slug: string }) {
           const href = `${base}${tab.href}`
           const isActive =
             tab.href === ''
-              ? pathname === base || pathname === `${base}/`
+              ? pathname === base || pathname === `${base}/` || pathname.startsWith(`${base}/services/`)
               : pathname.startsWith(href)
 
           return (
