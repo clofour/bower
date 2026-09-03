@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
-import { getUserOrganization, getOrgMembers } from '@/lib/queries'
+import { getUserOrganization, getOrgMembers, getInviteTokens } from '@/lib/queries'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { OrgSettingsForm } from '@/components/org-settings-form'
+import { InviteTokensSection } from '@/components/invite-tokens-section'
 
 export default async function OrganizationSettingsPage() {
   const user = await getCurrentUser()
@@ -12,7 +13,11 @@ export default async function OrganizationSettingsPage() {
   const ctx = await getUserOrganization(user.id)
   if (!ctx) redirect('/login')
 
-  const members = await getOrgMembers(ctx.org.id)
+  const [members, tokens] = await Promise.all([
+    getOrgMembers(ctx.org.id),
+    getInviteTokens(ctx.org.id),
+  ])
+
   const canEdit = ctx.role === 'owner' || ctx.role === 'admin'
 
   return (
@@ -30,6 +35,12 @@ export default async function OrganizationSettingsPage() {
           trellisApiUrl={ctx.org.trellisApiUrl}
           hasTrellisToken={!!ctx.org.trellisApiToken}
           canEdit={canEdit}
+        />
+
+        <InviteTokensSection
+          tokens={tokens}
+          canEdit={canEdit}
+          currentRole={ctx.role}
         />
 
         <Card className="p-5">
