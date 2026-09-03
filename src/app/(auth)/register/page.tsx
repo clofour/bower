@@ -17,7 +17,6 @@ export default function RegisterPage() {
 
     const formData = new FormData(e.currentTarget);
 
-    // Client-side password match check
     const password = formData.get("password") as string;
     const confirmPassword = formData.get("confirmPassword") as string;
 
@@ -66,7 +65,7 @@ export default function RegisterPage() {
           Create your account
         </h2>
         <p className="text-sm text-muted-foreground">
-          Get started with Canopy in seconds.
+          You need an invite token to join.
         </p>
       </div>
 
@@ -76,6 +75,18 @@ export default function RegisterPage() {
             {error}
           </div>
         )}
+
+        <div className="space-y-2">
+          <Label htmlFor="inviteToken">Invite token</Label>
+          <Input
+            id="inviteToken"
+            name="inviteToken"
+            type="text"
+            autoComplete="off"
+            required
+            placeholder="ci_..."
+          />
+        </div>
 
         <div className="space-y-2">
           <Label htmlFor="name">Full name</Label>

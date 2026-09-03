@@ -24,6 +24,7 @@ import {
   users,
   sharedSecretGroups,
   sharedSecretMembers,
+  inviteTokens,
 } from '@/db/schema'
 
 export async function getUserOrganization(userId: string) {
@@ -268,4 +269,16 @@ export async function getProjectIntegrations(projectId: string) {
 
 export async function getApiKeys(userId: string) {
   return db.select().from(apiKeys).where(eq(apiKeys.userId, userId)).orderBy(desc(apiKeys.createdAt))
+}
+
+export async function getInviteTokens(orgId: string) {
+  return db
+    .select({
+      token: inviteTokens,
+      createdByName: users.name,
+    })
+    .from(inviteTokens)
+    .leftJoin(users, eq(users.id, inviteTokens.createdByUserId))
+    .where(eq(inviteTokens.orgId, orgId))
+    .orderBy(desc(inviteTokens.createdAt))
 }

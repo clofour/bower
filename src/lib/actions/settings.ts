@@ -2,7 +2,7 @@
 
 import { and, eq } from 'drizzle-orm'
 import { db } from '@/db'
-import { organizations, users } from '@/db/schema'
+import { organizations, users, inviteTokens } from '@/db/schema'
 import { apiKeys } from '@/db/schema'
 import { createHash, randomBytes } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
@@ -152,4 +152,55 @@ export async function revokeApiKeyAction(id: string) {
   await db.delete(apiKeys).where(and(eq(apiKeys.id, id), eq(apiKeys.userId, user.id)))
   if (ctx && key) await recordAudit({ orgId: ctx.org.id, userId: user.id, action: 'api_key.revoked', resourceType: 'api_key', resourceId: id, details: { name: key.name } })
   revalidatePath('/settings/account')
+}
+
+export async function createInviteTokenAction(
+  role: 'owner' | 'admin' | 'member',
+  note?: string,
+): Promise<{ error?: string; token?: string }> {
+  const user = await getCurrentUser()
+  if (!user) return { error: 'Not authenticated.' }
+  const ctx = await getUserOrganization(user.id)
+  if (!ctx) return { error: 'No organization found.' }
+  if (ctx.role === 'member') return { error: 'Insufficient permissions.' }
+  if (role === 'owner' && ctx.role !== 'owner') return { error: 'Only owners can create owner-level tokens.' }
+
+  const rawToken = `ci_${randomBytes(24).toString('base64url')}`
+  const tokenHash = createHash('sha256').update(rawToken).digest('hex')
+  const tokenPrefix = rawToken.slice(0, 11)
+
+  await db.insert(inviteTokens).values({
+    orgId: ctx.org.id,
+    tokenHash,
+    tokenPrefix,
+    role,
+    note: note?.trim() || null,
+    createdByUserId: user.id,
+  })
+
+  await recordAudit({ orgId: ctx.org.id, userId: user.id, action: 'invite_token.created', resourceType: 'invite_token', resourceId: tokenPrefix, details: { role, note } })
+  revalidatePath('/settings/organization')
+  return { token: rawToken }
+}
+
+export async function revokeInviteTokenAction(id: string) {
+  const user = await getCurrentUser()
+  if (!user) return { error: 'Not authenticated.' }
+  const ctx = await getUserOrganization(user.id)
+  if (!ctx) return { error: 'No organization found.' }
+  if (ctx.role === 'member') return { error: 'Insufficient permissions.' }
+
+  const [token] = await db
+    .select()
+    .from(inviteTokens)
+    .where(and(eq(inviteTokens.id, id), eq(inviteTokens.orgId, ctx.org.id)))
+    .limit(1)
+
+  if (!token) return { error: 'Token not found.' }
+  if (token.usedAt) return { error: 'Cannot revoke a token that has already been used.' }
+
+  await db.delete(inviteTokens).where(eq(inviteTokens.id, id))
+  await recordAudit({ orgId: ctx.org.id, userId: user.id, action: 'invite_token.revoked', resourceType: 'invite_token', resourceId: id, details: { prefix: token.tokenPrefix } })
+  revalidatePath('/settings/organization')
+  return { success: true }
 }
