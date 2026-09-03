@@ -15,8 +15,9 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { createProjectAction } from '@/lib/actions/projects'
+import { NoopButton } from '@/components/noop-button'
 
-export function CreateProjectDialog() {
+export function CreateProjectDialog({ teams = [] }: { teams?: Array<{ id: string; name: string }> }) {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -54,6 +55,9 @@ export function CreateProjectDialog() {
               autoFocus
             />
           </div>
+          <div className="space-y-2"><Label htmlFor="registry-url">Container registry (optional)</Label><Input id="registry-url" name="registryUrl" placeholder="ghcr.io/organization" /></div>
+          <div className="space-y-2"><Label>Owning team</Label><select name="owningTeamId" className="h-9 w-full rounded-md border bg-background px-3 text-sm"><option value="">No owning team</option>{teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}</select></div>
+          <NoopButton feature="Authenticated registry pull-through" className="w-full">Add registry credentials</NoopButton>
           <div className="space-y-2">
             <Label htmlFor="project-description">Description (optional)</Label>
             <Textarea

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Activity, ArrowUpRight, FolderKanban, Gauge, Rocket, Server } from 'lucide-react'
 import { getCurrentUser } from '@/lib/auth'
-import { getDeploymentsByProject, getProjectsByOrg, getServicesByProject, getUserOrganization } from '@/lib/queries'
+import { getDeploymentsByProject, getProjectsForUser, getServicesByProject, getUserOrganization } from '@/lib/queries'
 import { getTrellisClient } from '@/lib/trellis-instance'
 import { Card } from '@/components/ui/card'
 import { PageHeading } from '@/components/page-heading'
@@ -11,7 +11,7 @@ import { Status } from '@/components/status'
 export default async function OverviewPage() {
   const user = await getCurrentUser(); if (!user) redirect('/login')
   const ctx = await getUserOrganization(user.id); if (!ctx) redirect('/login')
-  const projects = await getProjectsByOrg(ctx.org.id)
+  const projects = await getProjectsForUser(ctx.org.id, user.id, ctx.role)
   const details = await Promise.all(projects.map(async (project) => ({ project, services: await getServicesByProject(project.id), deployments: await getDeploymentsByProject(project.id, 6) })))
   const allDeployments = details.flatMap((item) => item.deployments).sort((a, b) => +new Date(b.deployment.createdAt) - +new Date(a.deployment.createdAt)).slice(0, 8)
   let nodes = 0; let clusterState = 'Not connected'

@@ -14,6 +14,7 @@ import {
   SESSION_COOKIE_NAME,
 } from '@/lib/auth'
 import { verifyTotpCode } from '@/lib/totp'
+import { recordAudit } from '@/lib/actions/shared'
 
 function slugify(name: string): string {
   return name
@@ -131,6 +132,7 @@ export async function registerAction(
     userId: newUser.id,
     role: 'owner',
   })
+  await recordAudit({ orgId: newOrg.id, userId: newUser.id, action: 'organization.created', resourceType: 'organization', resourceId: newOrg.id, details: { name: orgName } })
 
   const { token, expiresAt } = await createSession(newUser.id)
   const cookieStore = await cookies()

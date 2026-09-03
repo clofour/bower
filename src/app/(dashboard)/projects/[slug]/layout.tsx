@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getCurrentUser } from '@/lib/auth'
 import { getUserOrganization, getProjectBySlug } from '@/lib/queries'
 import { ProjectTabs } from '@/components/project-tabs'
+import { requireProject } from '@/lib/actions/shared'
 
 export default async function ProjectLayout({
   children,
@@ -20,6 +21,7 @@ export default async function ProjectLayout({
   const { slug } = await params
   const project = await getProjectBySlug(ctx.org.id, slug)
   if (!project) notFound()
+  try { await requireProject(project.id) } catch { notFound() }
 
   return (
     <div className="mx-auto max-w-6xl">

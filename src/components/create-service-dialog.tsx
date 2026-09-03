@@ -22,10 +22,14 @@ import {
 } from '@/components/ui/select'
 import { createServiceAction } from '@/lib/actions/services'
 
-export function CreateServiceDialog({ projectSlug }: { projectSlug: string }) {
+type Template = { name: string; type: 'web' | 'worker' | 'cron' | 'custom'; config: Record<string, unknown> }
+
+export function CreateServiceDialog({ projectSlug, templates = [] }: { projectSlug: string; templates?: Template[] }) {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [templateIndex, setTemplateIndex] = useState('')
+  const selected = templateIndex ? templates[Number(templateIndex)] : undefined
 
   function handleSubmit(formData: FormData) {
     setError(null)
@@ -50,6 +54,7 @@ export function CreateServiceDialog({ projectSlug }: { projectSlug: string }) {
           <DialogTitle>Create Service</DialogTitle>
         </DialogHeader>
         <form action={handleSubmit} className="space-y-4">
+          {templates.length > 0 && <div className="space-y-2"><Label>Starting point</Label><select value={templateIndex} onChange={(event) => setTemplateIndex(event.target.value)} className="h-9 w-full rounded-md border bg-background px-3 text-sm"><option value="">Blank service</option>{templates.map((template, index) => <option key={`${template.name}-${index}`} value={index}>{template.name}</option>)}</select><input type="hidden" name="templateConfig" value={selected ? JSON.stringify(selected.config) : ''} /></div>}
           <div className="space-y-2">
             <Label htmlFor="service-name">Name</Label>
             <Input
@@ -62,7 +67,7 @@ export function CreateServiceDialog({ projectSlug }: { projectSlug: string }) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="service-type">Type</Label>
-            <Select name="type" defaultValue="web">
+            <Select key={`type-${templateIndex}`} name="type" defaultValue={selected?.type ?? 'web'}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -77,9 +82,11 @@ export function CreateServiceDialog({ projectSlug }: { projectSlug: string }) {
           <div className="space-y-2">
             <Label htmlFor="service-image">Container Image</Label>
             <Input
+              key={`image-${templateIndex}`}
               id="service-image"
               name="image"
               placeholder="registry.example.com/my-app:latest"
+              defaultValue={typeof selected?.config.image === 'string' ? selected.config.image : ''}
               required
             />
           </div>

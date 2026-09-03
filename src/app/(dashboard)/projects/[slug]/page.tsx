@@ -6,9 +6,15 @@ import {
   getUserOrganization,
   getProjectBySlug,
   getServicesByProject,
+  getTemplates,
+  getEnvironmentsByProject,
+  getServiceConfigsWithEnvironments,
 } from '@/lib/queries'
 import { Card } from '@/components/ui/card'
 import { CreateServiceDialog } from '@/components/create-service-dialog'
+import { BUILTIN_TEMPLATES } from '@/lib/builtin-templates'
+import { getTrellisClient } from '@/lib/trellis-instance'
+import { Status } from '@/components/status'
 
 const typeColors: Record<string, string> = {
   web: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
@@ -32,13 +38,24 @@ export default async function ProjectServicesPage({
   const project = await getProjectBySlug(ctx.org.id, slug)
   if (!project) notFound()
 
-  const serviceList = await getServicesByProject(project.id)
+  const [serviceList, customTemplates, environments] = await Promise.all([getServicesByProject(project.id), getTemplates(ctx.org.id), getEnvironmentsByProject(project.id)])
+  const templates = [...BUILTIN_TEMPLATES, ...customTemplates.map((template) => ({ name: template.name, type: template.type, config: template.config as Record<string, unknown> }))]
+  const health = new Map<string, string>()
+  if (ctx.org.trellisApiUrl && ctx.org.trellisApiToken) {
+    const client = await getTrellisClient(ctx.org.id)
+    await Promise.all(serviceList.map(async (service) => {
+      const configs = await getServiceConfigsWithEnvironments(service.id)
+      await Promise.all(configs.map(async ({ config, environment }) => {
+        try { const allocations = await client.listAllocations({ namespace: environment.trellisNamespace, job: config.activeJobName || service.slug }); const revision = allocations.length ? Math.max(...allocations.map((item) => item.job_revision)) : 0; const current = allocations.filter((item) => item.job_revision === revision && item.phase !== 'stopped'); const value = current.length === 0 ? 'pending' : current.some((item) => item.phase === 'failed' || item.phase === 'lost' || item.health === 'unhealthy') ? 'failed' : current.every((item) => item.phase === 'running' && item.health === 'healthy') ? 'healthy' : 'deploying'; health.set(`${service.id}:${environment.id}`, value) } catch { health.set(`${service.id}:${environment.id}`, 'unknown') }
+      }))
+    }))
+  }
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Services</h2>
-        <CreateServiceDialog projectSlug={slug} />
+        <CreateServiceDialog projectSlug={slug} templates={templates} />
       </div>
 
       {serviceList.length === 0 ? (
@@ -51,7 +68,7 @@ export default async function ProjectServicesPage({
             Add a service to start deploying.
           </p>
           <div className="mt-4">
-            <CreateServiceDialog projectSlug={slug} />
+            <CreateServiceDialog projectSlug={slug} templates={templates} />
           </div>
         </Card>
       ) : (
@@ -69,6 +86,7 @@ export default async function ProjectServicesPage({
                   <div>
                     <h3 className="font-medium">{svc.name}</h3>
                     <p className="text-xs text-muted-foreground">{svc.slug}</p>
+                    <div className="mt-2 flex flex-wrap gap-1">{environments.map((environment) => <span key={environment.id} className="flex items-center gap-1 text-[10px] text-muted-foreground">{environment.name}<Status value={health.get(`${svc.id}:${environment.id}`) ?? 'pending'} /></span>)}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

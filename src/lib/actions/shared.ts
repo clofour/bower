@@ -19,6 +19,7 @@ export async function requireProject(projectId: string) {
   )).limit(1)
   if (!project) throw new Error('Project not found.')
   const projectRole = await getProjectRole(ctx.user.id, ctx.role, projectId)
+  if (!projectRole) throw new Error('Project not found.')
   return { ...ctx, project, projectRole }
 }
 
@@ -29,6 +30,7 @@ export async function requireService(serviceId: string) {
     .where(and(eq(services.id, serviceId), eq(projects.orgId, ctx.org.id))).limit(1)
   if (!row) throw new Error('Service not found.')
   const projectRole = await getProjectRole(ctx.user.id, ctx.role, row.project.id)
+  if (!projectRole) throw new Error('Service not found.')
   return { ...ctx, ...row, projectRole }
 }
 
@@ -39,11 +41,12 @@ async function getProjectRole(userId: string, orgRole: 'owner' | 'admin' | 'memb
     .where(and(eq(teamMemberships.userId, userId), eq(teamProjectAccess.projectId, projectId)))
   if (grants.some((grant) => grant.role === 'admin')) return 'admin' as const
   if (grants.some((grant) => grant.role === 'deployer')) return 'deployer' as const
-  return 'viewer' as const
+  if (grants.some((grant) => grant.role === 'viewer')) return 'viewer' as const
+  return null
 }
 
 export async function recordAudit(input: {
-  orgId: string; userId: string; action: string; resourceType: string;
+  orgId: string; userId: string | null; action: string; resourceType: string;
   resourceId: string; details?: Record<string, unknown>
 }) {
   await db.insert(auditLog).values({
