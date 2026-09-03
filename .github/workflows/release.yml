@@ -20,7 +20,7 @@ jobs:
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Build and publish dashboard container image
+      - name: Build and publish canopy
         env:
           IMAGE: ghcr.io/${{ github.repository_owner }}/canopy
           VERSION: ${{ github.ref_name }}
@@ -32,6 +32,38 @@ jobs:
             --tag "${IMAGE}:${VERSION}" \
             --tag "${IMAGE}:latest" \
             .
+          docker push "${IMAGE}:${VERSION}"
+          docker push "${IMAGE}:latest"
+
+      - name: Build and publish canopy-proxy
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/canopy-proxy
+          VERSION: ${{ github.ref_name }}
+        run: |
+          docker build \
+            --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            --label "org.opencontainers.image.version=${VERSION}" \
+            --file proxy/Dockerfile.caddy \
+            --tag "${IMAGE}:${VERSION}" \
+            --tag "${IMAGE}:latest" \
+            proxy
+          docker push "${IMAGE}:${VERSION}"
+          docker push "${IMAGE}:latest"
+
+      - name: Build and publish canopy-proxy-sync
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/canopy-proxy-sync
+          VERSION: ${{ github.ref_name }}
+        run: |
+          docker build \
+            --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            --label "org.opencontainers.image.version=${VERSION}" \
+            --file proxy/Dockerfile.agent \
+            --tag "${IMAGE}:${VERSION}" \
+            --tag "${IMAGE}:latest" \
+            proxy
           docker push "${IMAGE}:${VERSION}"
           docker push "${IMAGE}:latest"
 
