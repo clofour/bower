@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Canopy
 
-## Getting Started
+Canopy is an opinionated deployment dashboard built on top of [Trellis](https://github.com/clofour/trellis-experimental). It turns Trellis jobs and namespaces into projects, environments, services, promotions, routes, secrets, deployment history, teams, and an audit trail while leaving scheduling and container lifecycle in Trellis.
 
-First, run the development server:
+## Run locally
+
+Requirements: Node.js 20+, PostgreSQL, and a Trellis cluster credential with `cluster/write` access.
+
+```bash
+cp .env.example .env.local
+npm install
+npm run db:migrate
+npm run dev
+```
+
+Open `http://localhost:3000`, create the first organization owner, then add the Trellis API URL and token under **Organization**.
+
+## Commands
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm test
+npm run build
+npm run db:generate
+npm run db:migrate
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Container image
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Version tags publish the dashboard as `ghcr.io/clofour/canopy:<version>` and update `ghcr.io/clofour/canopy:latest`. The container listens on port 3000 and requires `DATABASE_URL`; configure the remaining values from `.env.example` for the deployment. Database migrations remain an explicit deployment step (`npm run db:migrate`) and should run before the new container starts.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Trellis support boundary
 
-## Learn More
+Canopy uses Trellis directly for job planning/application, allocation lifecycle and health, logs, lifecycle events, namespace secrets, and node draining. Scaling, pause/resume, promotion, and rollback are composed from job resubmission.
 
-To learn more about Next.js, take a look at the following resources:
+Controls that require APIs Trellis does not expose yet are intentionally present but no-op: restart, revision browsing, individual allocation stop, exec, cron execution, live event streaming, and per-allocation metrics. The UI explains this at the point of use instead of presenting a broken action.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Managed ingress
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Creating a route writes a generated Caddyfile to Trellis secrets and deploys a namespace-local Caddy + route-sync task group. The sync task uses Trellis `api_access: namespace/read`, polls healthy labeled allocations, respects canary weights, and reloads Caddy through its admin API. The two small images are defined under `proxy/` and published by the `proxy-images` workflow; override their names with `CANOPY_CADDY_IMAGE` and `CANOPY_PROXY_SYNC_IMAGE` when using another registry. Host listeners default to ports 80 and 443 and are configurable with `CANOPY_PROXY_HTTP_PORT` and `CANOPY_PROXY_HTTPS_PORT`.
 
-## Deploy on Vercel
+## Automation
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+API keys created in account settings authenticate `POST /api/deploy` with a bearer token. The JSON body is `{ "serviceId": "…", "environmentId": "…", "image": "…" }`. Inbound registry endpoints are created under project integrations; the endpoint token is also the HMAC-SHA256 secret and signatures are accepted through `X-Canopy-Signature` or `X-Hub-Signature-256`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deployment reconciliation
+
+The Next.js server watches active rollouts in the background, advances canary steps, records convergence events, and performs configured health-threshold rollbacks even when nobody has the deployment page open. `CANOPY_RECONCILE_INTERVAL` controls the polling cadence in seconds and defaults to 5.
+
+See [PLAN.md](./PLAN.md) for the product model and responsibility boundary.

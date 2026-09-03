@@ -1,11 +1,9 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, FolderKanban } from 'lucide-react'
+import { FolderKanban } from 'lucide-react'
 import { getCurrentUser } from '@/lib/auth'
-import { getUserOrganization, getProjectsByOrg } from '@/lib/queries'
-import { Button } from '@/components/ui/button'
+import { getUserOrganization, getProjectsForUser, getTeamsByOrg } from '@/lib/queries'
 import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { CreateProjectDialog } from '@/components/create-project-dialog'
 
 export default async function ProjectsPage() {
@@ -15,7 +13,7 @@ export default async function ProjectsPage() {
   const ctx = await getUserOrganization(user.id)
   if (!ctx) redirect('/login')
 
-  const projectList = await getProjectsByOrg(ctx.org.id)
+  const [projectList, teams] = await Promise.all([getProjectsForUser(ctx.org.id, user.id, ctx.role), getTeamsByOrg(ctx.org.id)])
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -26,7 +24,7 @@ export default async function ProjectsPage() {
             Manage your deployment projects
           </p>
         </div>
-        <CreateProjectDialog />
+        {ctx.role !== 'member' && <CreateProjectDialog teams={teams} />}
       </div>
 
       {projectList.length === 0 ? (
@@ -38,7 +36,7 @@ export default async function ProjectsPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             Create your first project to get started.
           </p>
-          <CreateProjectDialog />
+          {ctx.role !== 'member' && <CreateProjectDialog teams={teams} />}
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

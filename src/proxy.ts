@@ -41,6 +41,6 @@ export const config = {
      * /login and /register are matched but handled as public paths
      * in the proxy function body.
      */
-    '/((?!api/v1/webhooks|_next/static|_next/image|favicon\\.ico|sitemap\\.xml|robots\\.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!api/webhooks|api/deploy|_next/static|_next/image|favicon\\.ico|sitemap\\.xml|robots\\.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }

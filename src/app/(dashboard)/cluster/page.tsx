@@ -1,11 +1,13 @@
 import { redirect } from 'next/navigation'
-import { Server, AlertTriangle, Cpu, MemoryStick } from 'lucide-react'
+import { Server, AlertTriangle } from 'lucide-react'
 import { getCurrentUser } from '@/lib/auth'
 import { getUserOrganization } from '@/lib/queries'
 import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { getTrellisClient } from '@/lib/trellis-instance'
 import type { TrellisNode } from '@/types/trellis'
+import { Button } from '@/components/ui/button'
+import { setNodeDrainAction } from '@/lib/actions/operations'
+import { NoopButton } from '@/components/noop-button'
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -50,9 +52,7 @@ export default async function ClusterPage() {
   }
 
   const totalCpu = nodes.reduce((acc, n) => acc + n.cpu, 0)
-  const usedCpu = nodes.reduce((acc, n) => acc + n.cpu_used, 0)
   const totalMem = nodes.reduce((acc, n) => acc + n.memory, 0)
-  const usedMem = nodes.reduce((acc, n) => acc + n.memory_used, 0)
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -93,21 +93,15 @@ export default async function ClusterPage() {
                 <p className="mt-1 text-2xl font-bold">{nodes.length}</p>
               </Card>
               <Card className="p-4">
-                <p className="text-sm text-muted-foreground">CPU Usage</p>
+                <p className="text-sm text-muted-foreground">CPU capacity</p>
                 <p className="mt-1 text-2xl font-bold">
-                  {formatCpu(usedCpu)}{' '}
-                  <span className="text-sm font-normal text-muted-foreground">
-                    / {formatCpu(totalCpu)}
-                  </span>
+                  {formatCpu(totalCpu)}
                 </p>
               </Card>
               <Card className="p-4">
-                <p className="text-sm text-muted-foreground">Memory Usage</p>
+                <p className="text-sm text-muted-foreground">Memory capacity</p>
                 <p className="mt-1 text-2xl font-bold">
-                  {formatBytes(usedMem)}{' '}
-                  <span className="text-sm font-normal text-muted-foreground">
-                    / {formatBytes(totalMem)}
-                  </span>
+                  {formatBytes(totalMem)}
                 </p>
               </Card>
             </div>
@@ -115,13 +109,6 @@ export default async function ClusterPage() {
 
           <div className="space-y-3">
             {nodes.map((node) => {
-              const cpuPercent =
-                node.cpu > 0 ? Math.round((node.cpu_used / node.cpu) * 100) : 0
-              const memPercent =
-                node.memory > 0
-                  ? Math.round((node.memory_used / node.memory) * 100)
-                  : 0
-
               return (
                 <Card key={node.id} className="p-4">
                   <div className="flex items-start justify-between">
@@ -132,7 +119,7 @@ export default async function ClusterPage() {
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium font-mono text-sm">
-                            {node.address}
+                            {node.address ?? `${node.host ?? 'unknown'}:${node.port ?? ''}`}
                           </h3>
                           <span
                             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[node.status] ?? ''}`}
@@ -144,34 +131,17 @@ export default async function ClusterPage() {
                           {node.os}/{node.arch} &middot; v{node.version}
                         </p>
                       </div>
-                    </div>
+                    </div><form action={setNodeDrainAction.bind(null, node.id, node.status !== 'draining')}><Button size="sm" variant="outline">{node.status === 'draining' ? 'Undrain' : 'Drain'}</Button></form>
                   </div>
-                  <div className="mt-3 grid grid-cols-2 gap-4">
+                  <div className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-3">
                     <div>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                        <span>CPU</span>
-                        <span>{cpuPercent}%</span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-muted">
-                        <div
-                          className="h-1.5 rounded-full bg-primary transition-all"
-                          style={{ width: `${cpuPercent}%` }}
-                        />
-                      </div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Capacity</p><p className="mt-1 text-sm font-semibold">{formatCpu(node.cpu)} · {formatBytes(node.memory)}</p>
                     </div>
                     <div>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                        <span>Memory</span>
-                        <span>{memPercent}%</span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-muted">
-                        <div
-                          className="h-1.5 rounded-full bg-primary transition-all"
-                          style={{ width: `${memPercent}%` }}
-                        />
-                      </div>
-                    </div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Labels</p><p className="mt-1 truncate text-sm font-semibold">{Object.entries(node.labels ?? {}).map(([k,v]) => `${k}=${v}`).join(', ') || 'None'}</p>
+                    </div><div><p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Host volumes</p><p className="mt-1 truncate text-sm font-semibold">{(node.volumes ?? node.host_volumes ?? []).join(', ') || 'None'}</p></div>
                   </div>
+                  <div className="mt-3"><NoopButton feature="Per-allocation resource metrics" variant="ghost" className="h-auto p-0 text-xs text-muted-foreground">Utilization unavailable until Trellis exposes metrics</NoopButton></div>
                 </Card>
               )
             })}

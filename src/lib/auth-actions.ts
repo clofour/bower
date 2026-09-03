@@ -13,6 +13,8 @@ import {
   getSessionCookieConfig,
   SESSION_COOKIE_NAME,
 } from '@/lib/auth'
+import { verifyTotpCode } from '@/lib/totp'
+import { recordAudit } from '@/lib/actions/shared'
 
 function slugify(name: string): string {
   return name
@@ -27,6 +29,7 @@ export async function loginAction(
 ): Promise<{ error?: string }> {
   const email = formData.get('email')
   const password = formData.get('password')
+  const totpCode = formData.get('totpCode')
 
   if (
     typeof email !== 'string' ||
@@ -56,11 +59,15 @@ export async function loginAction(
     return { error: 'Invalid email or password.' }
   }
 
+  if (user.totpEnabled && (!user.totpSecret || typeof totpCode !== 'string' || !verifyTotpCode(user.totpSecret, totpCode))) {
+    return { error: 'Enter a valid authenticator code.' }
+  }
+
   const { token, expiresAt } = await createSession(user.id)
   const cookieStore = await cookies()
   cookieStore.set(getSessionCookieConfig(token, expiresAt))
 
-  redirect('/projects')
+  redirect('/dashboard')
 }
 
 export async function registerAction(
@@ -125,12 +132,13 @@ export async function registerAction(
     userId: newUser.id,
     role: 'owner',
   })
+  await recordAudit({ orgId: newOrg.id, userId: newUser.id, action: 'organization.created', resourceType: 'organization', resourceId: newOrg.id, details: { name: orgName } })
 
   const { token, expiresAt } = await createSession(newUser.id)
   const cookieStore = await cookies()
   cookieStore.set(getSessionCookieConfig(token, expiresAt))
 
-  redirect('/projects')
+  redirect('/dashboard')
 }
 
 export async function logoutAction(): Promise<void> {

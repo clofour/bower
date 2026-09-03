@@ -11,6 +11,7 @@ import type {
   TrellisRestartPolicy,
   TrellisUpdateStrategy,
   TrellisNetworking,
+  TrellisVolume,
 } from '@/types/trellis'
 
 // ---------------------------------------------------------------------------
@@ -36,6 +37,7 @@ export interface CanopySecretBinding {
 
 export interface CanopyServiceConfig {
   name: string
+  serviceLabel?: string
   namespace: string
   type: 'web' | 'worker' | 'cron' | 'custom'
   image: string
@@ -45,12 +47,18 @@ export interface CanopyServiceConfig {
   memory: number // bytes
   healthCheckPath?: string
   healthCheckType?: 'http' | 'tcp' | 'script'
+  healthCheckCommand?: string[]
+  healthCheckInterval?: number
+  healthCheckTimeout?: number
+  healthCheckThreshold?: number
   deploymentStrategy: 'rolling' | 'recreate' | 'blue_green' | 'canary'
   envVars: Record<string, string>
   secrets: CanopySecretBinding[]
   labels: Record<string, string>
   command?: string
   sidecars: CanopySidecar[]
+  volumes: TrellisVolume[]
+  rawConfig?: TrellisJobSpec
 }
 
 // ---------------------------------------------------------------------------
@@ -66,8 +74,6 @@ const NS_PER_MINUTE = 60 * NS_PER_SECOND
 
 const DEFAULT_HEALTH_CHECK_INTERVAL = 10 * NS_PER_SECOND
 const DEFAULT_HEALTH_CHECK_TIMEOUT = 2 * NS_PER_SECOND
-const DEFAULT_HEALTH_CHECK_INITIAL_DELAY = 5 * NS_PER_SECOND
-const DEFAULT_HEALTH_CHECK_SUCCESS_THRESHOLD = 1
 const DEFAULT_HEALTH_CHECK_FAILURE_THRESHOLD = 3
 
 // ---------------------------------------------------------------------------
@@ -86,6 +92,9 @@ const WORKER_RESTART_WINDOW = 5 * NS_PER_MINUTE
  * submitted to `POST /v1/jobs` (or `/v1/jobs/plan`).
  */
 export function buildJobSpec(config: CanopyServiceConfig): TrellisJobSpec {
+  if (config.type === 'custom' && config.rawConfig) {
+    return { ...config.rawConfig, name: config.name, namespace: config.namespace, task_groups: config.rawConfig.task_groups.map((group) => ({ ...group, labels: { ...group.labels, 'canopy/managed': 'true', 'canopy/service': config.serviceLabel ?? config.name } })) }
+  }
   const primaryTask = buildPrimaryTask(config)
   const sidecarTasks = config.sidecars.map((s) => buildSidecarTask(s))
   const tasks = [primaryTask, ...sidecarTasks]
@@ -93,7 +102,7 @@ export function buildJobSpec(config: CanopyServiceConfig): TrellisJobSpec {
   const labels: Record<string, string> = {
     ...config.labels,
     'canopy/managed': 'true',
-    'canopy/service': config.name,
+    'canopy/service': config.serviceLabel ?? config.name,
   }
 
   const taskGroup: TrellisTaskGroup = {
@@ -139,6 +148,8 @@ function buildPrimaryTask(config: CanopyServiceConfig): TrellisTask {
   if (config.command) {
     task.command = config.command
   }
+
+  if (config.volumes.length > 0) task.volumes = config.volumes
 
   // Environment variables
   if (Object.keys(config.envVars).length > 0) {
@@ -228,19 +239,17 @@ function buildNetworking(config: CanopyServiceConfig): TrellisNetworking | null 
 }
 
 function buildHealthCheck(config: CanopyServiceConfig): TrellisHealthCheck | null {
-  if (config.type !== 'web') {
+  if (!config.healthCheckType) {
     return null
   }
 
-  const checkType = config.healthCheckType ?? 'http'
+  const checkType = config.healthCheckType
 
   const check: TrellisHealthCheck = {
     type: checkType,
-    interval: DEFAULT_HEALTH_CHECK_INTERVAL,
-    timeout: DEFAULT_HEALTH_CHECK_TIMEOUT,
-    initial_delay: DEFAULT_HEALTH_CHECK_INITIAL_DELAY,
-    success_threshold: DEFAULT_HEALTH_CHECK_SUCCESS_THRESHOLD,
-    failure_threshold: DEFAULT_HEALTH_CHECK_FAILURE_THRESHOLD,
+    interval: (config.healthCheckInterval ?? DEFAULT_HEALTH_CHECK_INTERVAL / NS_PER_SECOND) * NS_PER_SECOND,
+    timeout: (config.healthCheckTimeout ?? DEFAULT_HEALTH_CHECK_TIMEOUT / NS_PER_SECOND) * NS_PER_SECOND,
+    threshold: config.healthCheckThreshold ?? DEFAULT_HEALTH_CHECK_FAILURE_THRESHOLD,
   }
 
   if (checkType === 'http') {
@@ -255,6 +264,8 @@ function buildHealthCheck(config: CanopyServiceConfig): TrellisHealthCheck | nul
       check.port = config.port
     }
   }
+
+  if (checkType === 'script') check.command = config.healthCheckCommand ?? []
 
   return check
 }

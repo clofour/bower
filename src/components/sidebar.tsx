@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   FolderKanban,
+  LayoutDashboard,
   Server,
   Building2,
   User,
@@ -12,11 +13,14 @@ import {
   PanelLeftClose,
   PanelLeft,
   X,
+  Users,
+  ScrollText,
+  Blocks,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { logoutAction } from "@/lib/auth-actions";
+import { Brand } from '@/components/brand'
 
 interface NavItem {
   label: string;
@@ -25,12 +29,16 @@ interface NavItem {
 }
 
 const mainNav: NavItem[] = [
+  { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "Projects", href: "/projects", icon: FolderKanban },
   { label: "Cluster", href: "/cluster", icon: Server },
 ];
 
 const settingsNav: NavItem[] = [
   { label: "Organization", href: "/settings/organization", icon: Building2 },
+  { label: "Teams", href: "/settings/teams", icon: Users },
+  { label: "Templates", href: "/settings/templates", icon: Blocks },
+  { label: "Audit log", href: "/settings/audit", icon: ScrollText },
   { label: "Account", href: "/settings/account", icon: User },
 ];
 
@@ -43,11 +51,6 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  // Close mobile overlay on route change
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
 
   // Close mobile overlay on Escape
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -73,7 +76,7 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
     .slice(0, 2);
 
   // --- Shared sidebar content ---
-  function SidebarContent({ mobile = false }: { mobile?: boolean }) {
+  function renderSidebarContent(mobile = false) {
     const isCollapsed = !mobile && collapsed;
 
     return (
@@ -85,24 +88,7 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
             isCollapsed && "justify-center px-0"
           )}
         >
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              className="h-3.5 w-3.5 text-primary-foreground"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 3l-1.912 5.813a2 2 0 01-1.275 1.275L3 12l5.813 1.912a2 2 0 011.275 1.275L12 21l1.912-5.813a2 2 0 011.275-1.275L21 12l-5.813-1.912a2 2 0 01-1.275-1.275L12 3z" />
-            </svg>
-          </div>
-          {!isCollapsed && (
-            <span className="text-[15px] font-bold tracking-tight text-sidebar-foreground">
-              Canopy
-            </span>
-          )}
+          <Brand compact={isCollapsed} />
 
           {/* Mobile close */}
           {mobile && (
@@ -209,7 +195,7 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
             onClick={() => setMobileOpen(false)}
           />
           <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-sidebar-background md:hidden">
-            <SidebarContent mobile />
+            {renderSidebarContent(true)}
           </aside>
         </>
       )}
@@ -221,7 +207,7 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
           collapsed ? "w-[60px]" : "w-60"
         )}
       >
-        <SidebarContent />
+        {renderSidebarContent()}
       </aside>
     </>
   );

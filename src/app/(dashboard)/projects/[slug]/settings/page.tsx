@@ -1,8 +1,13 @@
 import { redirect, notFound } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
-import { getUserOrganization, getProjectBySlug } from '@/lib/queries'
+import { getUserOrganization, getProjectBySlug, getTeamsByOrg } from '@/lib/queries'
 import { Card } from '@/components/ui/card'
 import { DeleteProjectButton } from '@/components/delete-project-button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
+import { updateProjectAction } from '@/lib/actions/projects'
+import { NoopButton } from '@/components/noop-button'
 
 export default async function ProjectSettingsPage({
   params,
@@ -20,6 +25,7 @@ export default async function ProjectSettingsPage({
   if (!project) notFound()
 
   const canDelete = ctx.role === 'owner' || ctx.role === 'admin'
+  const teams = await getTeamsByOrg(ctx.org.id)
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -31,33 +37,8 @@ export default async function ProjectSettingsPage({
       </div>
 
       <Card className="p-5">
-        <h3 className="font-medium">General</h3>
-        <div className="mt-4 space-y-3">
-          <div>
-            <p className="text-sm text-muted-foreground">Name</p>
-            <p className="text-sm font-medium">{project.name}</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Slug</p>
-            <p className="text-sm font-mono">{project.slug}</p>
-          </div>
-          {project.description && (
-            <div>
-              <p className="text-sm text-muted-foreground">Description</p>
-              <p className="text-sm">{project.description}</p>
-            </div>
-          )}
-          <div>
-            <p className="text-sm text-muted-foreground">Created</p>
-            <p className="text-sm">
-              {new Date(project.createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </p>
-          </div>
-        </div>
+        <h3 className="font-medium">General & registry</h3><p className="mt-1 text-xs text-muted-foreground">Slug <span className="font-mono">{project.slug}</span> · created {new Date(project.createdAt).toLocaleDateString()}</p>
+        <form action={updateProjectAction.bind(null, project.id)} className="mt-4 space-y-3"><Input name="name" defaultValue={project.name} required /><Textarea name="description" defaultValue={project.description ?? ''} placeholder="Description" /><select name="owningTeamId" defaultValue={project.owningTeamId ?? ''} className="h-9 w-full rounded-md border bg-background px-3 text-sm"><option value="">No owning team</option>{teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}</select><Input name="registryUrl" defaultValue={project.registryUrl ?? ''} placeholder="Registry URL" /><NoopButton feature="Authenticated registry pull-through" className="w-full">Add registry credentials</NoopButton><Button>Save project</Button></form>
       </Card>
 
       {canDelete && (

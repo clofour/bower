@@ -85,6 +85,18 @@ export const teamProjectRoleEnum = pgEnum("team_project_role", [
   "viewer",
 ]);
 
+export const webhookProviderEnum = pgEnum("webhook_provider", [
+  "generic",
+  "docker_hub",
+  "ghcr",
+]);
+
+export const webhookDeployModeEnum = pgEnum("webhook_deploy_mode", [
+  "any_push",
+  "tag",
+  "digest",
+]);
+
 // ---------------------------------------------------------------------------
 // Auth / Org layer
 // ---------------------------------------------------------------------------
@@ -189,6 +201,7 @@ export const projects = pgTable(
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     description: text("description"),
+    owningTeamId: uuid("owning_team_id"),
     registryUrl: text("registry_url"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -215,6 +228,8 @@ export const environments = pgTable(
     promotionOrder: integer("promotion_order").notNull(),
     isLocked: boolean("is_locked").notNull().default(false),
     defaultReplicas: integer("default_replicas").notNull().default(1),
+    resourceTier: resourceTierEnum("resource_tier").notNull().default("small"),
+    envVars: jsonb("env_vars").notNull().default({}),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -269,6 +284,10 @@ export const serviceConfigs = pgTable(
     memory: integer("memory").notNull(),
     healthCheckPath: text("health_check_path"),
     healthCheckType: healthCheckTypeEnum("health_check_type"),
+    healthCheckCommand: jsonb("health_check_command").notNull().default([]),
+    healthCheckInterval: integer("health_check_interval").notNull().default(10),
+    healthCheckTimeout: integer("health_check_timeout").notNull().default(2),
+    healthCheckThreshold: integer("health_check_threshold").notNull().default(3),
     deploymentStrategy: deploymentStrategyEnum("deployment_strategy")
       .notNull()
       .default("rolling"),
@@ -276,6 +295,14 @@ export const serviceConfigs = pgTable(
     envVars: jsonb("env_vars").notNull().default({}),
     labels: jsonb("labels").notNull().default({}),
     command: text("command"),
+    volumes: jsonb("volumes").notNull().default([]),
+    secretBindings: jsonb("secret_bindings").notNull().default([]),
+    rawConfig: jsonb("raw_config"),
+    cronSchedule: text("cron_schedule"),
+    pausedReplicas: integer("paused_replicas"),
+    activeJobName: text("active_job_name"),
+    autoRollbackSeconds: integer("auto_rollback_seconds").notNull().default(300),
+    canarySteps: jsonb("canary_steps").notNull().default([10, 25, 50, 100]),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -330,6 +357,9 @@ export const deployments = pgTable("deployments", {
   triggerType: triggerTypeEnum("trigger_type").notNull(),
   trellisRevision: integer("trellis_revision"),
   planDiff: jsonb("plan_diff"),
+  jobSpec: jsonb("job_spec"),
+  previousJobSpec: jsonb("previous_job_spec"),
+  trellisJobName: text("trellis_job_name"),
   startedAt: timestamp("started_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -338,6 +368,15 @@ export const deployments = pgTable("deployments", {
     .notNull()
     .defaultNow(),
 });
+
+export const deploymentEvents = pgTable("deployment_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  deploymentId: uuid("deployment_id").notNull().references(() => deployments.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  message: text("message").notNull(),
+  details: jsonb("details").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("deployment_events_deployment_created_idx").on(table.deploymentId, table.createdAt)]);
 
 // ---------------------------------------------------------------------------
 // Routing layer
@@ -359,14 +398,18 @@ export const routes = pgTable("routes", {
   port: integer("port").notNull(),
   tlsMode: tlsModeEnum("tls_mode").notNull().default("auto"),
   headers: jsonb("headers").notNull().default({}),
+  responseHeaders: jsonb("response_headers").notNull().default({}),
   rateLimit: integer("rate_limit"),
+  redirects: jsonb("redirects").notNull().default([]),
+  tlsCertSecret: text("tls_cert_secret"),
+  tlsKeySecret: text("tls_key_secret"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (table) => [uniqueIndex("routes_environment_domain_path_idx").on(table.environmentId, table.domain, table.pathPrefix)]);
 
 export const managedProxies = pgTable("managed_proxies", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -377,6 +420,7 @@ export const managedProxies = pgTable("managed_proxies", {
   trellisJobName: text("trellis_job_name").notNull(),
   status: proxyStatusEnum("status").notNull(),
   port: integer("port").notNull().default(80),
+  configHash: text("config_hash"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -439,7 +483,7 @@ export const sharedSecretMembers = pgTable("shared_secret_members", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (table) => [uniqueIndex("shared_secret_members_group_secret_idx").on(table.groupId, table.secretMetadataId)]);
 
 // ---------------------------------------------------------------------------
 // Audit
@@ -481,7 +525,10 @@ export const webhookEndpoints = pgTable("webhook_endpoints", {
     .notNull()
     .references(() => environments.id, { onDelete: "cascade" }),
   tokenHash: text("token_hash").notNull().unique(),
+  tokenPrefix: text("token_prefix").notNull(),
   signatureSecretHash: text("signature_secret_hash").notNull(),
+  provider: webhookProviderEnum("provider").notNull().default("generic"),
+  deployMode: webhookDeployModeEnum("deploy_mode").notNull().default("any_push"),
   tagFilter: text("tag_filter"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true })

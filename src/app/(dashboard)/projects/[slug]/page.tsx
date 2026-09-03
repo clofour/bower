@@ -1,15 +1,20 @@
 import { redirect, notFound } from 'next/navigation'
-import { Layers, Plus } from 'lucide-react'
+import { Layers, ArrowUpRight, Boxes } from 'lucide-react'
+import Link from 'next/link'
 import { getCurrentUser } from '@/lib/auth'
 import {
   getUserOrganization,
   getProjectBySlug,
   getServicesByProject,
+  getTemplates,
   getEnvironmentsByProject,
+  getServiceConfigsWithEnvironments,
 } from '@/lib/queries'
 import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { CreateServiceDialog } from '@/components/create-service-dialog'
+import { BUILTIN_TEMPLATES } from '@/lib/builtin-templates'
+import { getTrellisClient } from '@/lib/trellis-instance'
+import { Status } from '@/components/status'
 
 const typeColors: Record<string, string> = {
   web: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
@@ -33,16 +38,24 @@ export default async function ProjectServicesPage({
   const project = await getProjectBySlug(ctx.org.id, slug)
   if (!project) notFound()
 
-  const [serviceList, envList] = await Promise.all([
-    getServicesByProject(project.id),
-    getEnvironmentsByProject(project.id),
-  ])
+  const [serviceList, customTemplates, environments] = await Promise.all([getServicesByProject(project.id), getTemplates(ctx.org.id), getEnvironmentsByProject(project.id)])
+  const templates = [...BUILTIN_TEMPLATES, ...customTemplates.map((template) => ({ name: template.name, type: template.type, config: template.config as Record<string, unknown> }))]
+  const health = new Map<string, string>()
+  if (ctx.org.trellisApiUrl && ctx.org.trellisApiToken) {
+    const client = await getTrellisClient(ctx.org.id)
+    await Promise.all(serviceList.map(async (service) => {
+      const configs = await getServiceConfigsWithEnvironments(service.id)
+      await Promise.all(configs.map(async ({ config, environment }) => {
+        try { const allocations = await client.listAllocations({ namespace: environment.trellisNamespace, job: config.activeJobName || service.slug }); const revision = allocations.length ? Math.max(...allocations.map((item) => item.job_revision)) : 0; const current = allocations.filter((item) => item.job_revision === revision && item.phase !== 'stopped'); const value = current.length === 0 ? 'pending' : current.some((item) => item.phase === 'failed' || item.phase === 'lost' || item.health === 'unhealthy') ? 'failed' : current.every((item) => item.phase === 'running' && item.health === 'healthy') ? 'healthy' : 'deploying'; health.set(`${service.id}:${environment.id}`, value) } catch { health.set(`${service.id}:${environment.id}`, 'unknown') }
+      }))
+    }))
+  }
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Services</h2>
-        <CreateServiceDialog projectSlug={slug} />
+        <CreateServiceDialog projectSlug={slug} templates={templates} />
       </div>
 
       {serviceList.length === 0 ? (
@@ -55,21 +68,25 @@ export default async function ProjectServicesPage({
             Add a service to start deploying.
           </p>
           <div className="mt-4">
-            <CreateServiceDialog projectSlug={slug} />
+            <CreateServiceDialog projectSlug={slug} templates={templates} />
           </div>
         </Card>
       ) : (
         <div className="space-y-3">
           {serviceList.map((svc) => (
-            <Card key={svc.id} className="p-4">
+            <Link key={svc.id} href={`/projects/${slug}/services/${svc.slug}`}>
+            <Card className="group overflow-hidden p-0 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+              <div className="h-1 bg-gradient-to-r from-primary via-cyan-400 to-transparent opacity-60" />
+              <div className="flex items-center justify-between p-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted">
-                    <Layers className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                    <Boxes className="h-4 w-4 text-primary" />
                   </div>
                   <div>
                     <h3 className="font-medium">{svc.name}</h3>
                     <p className="text-xs text-muted-foreground">{svc.slug}</p>
+                    <div className="mt-2 flex flex-wrap gap-1">{environments.map((environment) => <span key={environment.id} className="flex items-center gap-1 text-[10px] text-muted-foreground">{environment.name}<Status value={health.get(`${svc.id}:${environment.id}`) ?? 'pending'} /></span>)}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -80,7 +97,9 @@ export default async function ProjectServicesPage({
                   </span>
                 </div>
               </div>
-            </Card>
+              <ArrowUpRight className="h-4 w-4 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" />
+              </div>
+            </Card></Link>
           ))}
         </div>
       )}

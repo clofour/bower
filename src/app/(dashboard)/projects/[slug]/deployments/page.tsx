@@ -5,9 +5,10 @@ import {
   getUserOrganization,
   getProjectBySlug,
   getDeploymentsByProject,
+  getDeploymentEvents,
 } from '@/lib/queries'
 import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { DeploymentPoller } from '@/components/deployment-poller'
 
 const statusStyles: Record<string, string> = {
   pending: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20',
@@ -19,9 +20,10 @@ const statusStyles: Record<string, string> = {
 }
 
 export default async function DeploymentsPage({
-  params,
+  params, searchParams,
 }: {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ environment?: string; service?: string; user?: string; status?: string }>
 }) {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
@@ -34,17 +36,22 @@ export default async function DeploymentsPage({
   if (!project) notFound()
 
   const deploymentList = await getDeploymentsByProject(project.id)
+  const filters = await searchParams
+  const filtered = deploymentList.filter((item) => (!filters.environment || item.environmentName === filters.environment) && (!filters.service || item.serviceName === filters.service) && (!filters.user || (item.userName || 'Automation') === filters.user) && (!filters.status || item.deployment.status === filters.status))
+  const events = await getDeploymentEvents(filtered.map((item) => item.deployment.id))
 
   return (
     <div>
+      <DeploymentPoller active={deploymentList.some((item) => ['pending', 'planning', 'deploying'].includes(item.deployment.status))} />
       <div className="mb-6">
         <h2 className="text-lg font-semibold">Deployments</h2>
         <p className="text-sm text-muted-foreground">
           History of all deployments across services and environments.
         </p>
       </div>
+      <form className="mb-5 grid gap-2 rounded-xl border bg-muted/30 p-3 sm:grid-cols-4"><input name="environment" defaultValue={filters.environment ?? ''} placeholder="Environment" className="h-9 rounded-md border bg-background px-3 text-sm" /><input name="service" defaultValue={filters.service ?? ''} placeholder="Service" className="h-9 rounded-md border bg-background px-3 text-sm" /><input name="user" defaultValue={filters.user ?? ''} placeholder="User" className="h-9 rounded-md border bg-background px-3 text-sm" /><select name="status" defaultValue={filters.status ?? ''} className="h-9 rounded-md border bg-background px-3 text-sm"><option value="">Any status</option>{Object.keys(statusStyles).map((status) => <option key={status}>{status}</option>)}</select><button className="sr-only">Filter</button></form>
 
-      {deploymentList.length === 0 ? (
+      {filtered.length === 0 ? (
         <Card className="flex flex-col items-center justify-center py-16">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
             <Rocket className="h-6 w-6 text-muted-foreground" />
@@ -56,8 +63,9 @@ export default async function DeploymentsPage({
         </Card>
       ) : (
         <div className="space-y-2">
-          {deploymentList.map((d) => (
-            <Card key={d.deployment.id} className="p-4">
+          {filtered.map((d) => (
+            <Card key={d.deployment.id} className="p-4"><details>
+              <summary className="list-none cursor-pointer">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div>
@@ -72,6 +80,7 @@ export default async function DeploymentsPage({
                     <p className="mt-0.5 text-xs text-muted-foreground font-mono">
                       {d.deployment.imageAfter}
                     </p>
+                    <p className="mt-1 text-xs text-muted-foreground">{d.environmentName} · {d.userName || 'Automation'} · {d.deployment.triggerType}</p>
                   </div>
                 </div>
                 <div className="text-right text-xs text-muted-foreground">
@@ -86,6 +95,7 @@ export default async function DeploymentsPage({
                   </p>
                 </div>
               </div>
+              </summary><div className="mt-4 grid gap-4 border-t pt-4 lg:grid-cols-2"><div><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Semantic plan</p><pre className="mt-2 max-h-64 overflow-auto rounded-xl bg-muted p-3 text-xs">{JSON.stringify(d.deployment.planDiff, null, 2)}</pre></div><div><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Convergence timeline</p><div className="mt-2 space-y-2">{events.filter((event) => event.deploymentId === d.deployment.id).map((event) => <div key={event.id} className="rounded-xl border p-3 text-xs"><b>{event.type.replace('_', ' ')}</b><p className="mt-1 text-muted-foreground">{event.message}</p><time className="mt-1 block text-[10px] text-muted-foreground">{new Date(event.createdAt).toLocaleString()}</time></div>)}</div></div></div></details>
             </Card>
           ))}
         </div>
