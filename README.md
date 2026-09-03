@@ -26,6 +26,10 @@ npm run db:generate
 npm run db:migrate
 ```
 
+## Container image
+
+Version tags publish the dashboard as `ghcr.io/clofour/canopy:<version>` and update `ghcr.io/clofour/canopy:latest`. The container listens on port 3000 and requires `DATABASE_URL`; configure the remaining values from `.env.example` for the deployment. Database migrations remain an explicit deployment step (`npm run db:migrate`) and should run before the new container starts.
+
 ## Trellis support boundary
 
 Canopy uses Trellis directly for job planning/application, allocation lifecycle and health, logs, lifecycle events, namespace secrets, and node draining. Scaling, pause/resume, promotion, and rollback are composed from job resubmission.
