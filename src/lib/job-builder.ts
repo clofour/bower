@@ -1,0 +1,290 @@
+// ---------------------------------------------------------------------------
+// Job builder — converts a Canopy service config into a Trellis JobSpec
+// ---------------------------------------------------------------------------
+
+import type {
+  TrellisJobSpec,
+  TrellisTaskGroup,
+  TrellisTask,
+  TrellisHealthCheck,
+  TrellisSecretRef,
+  TrellisRestartPolicy,
+  TrellisUpdateStrategy,
+  TrellisNetworking,
+} from '@/types/trellis'
+
+// ---------------------------------------------------------------------------
+// Canopy service configuration (the Canopy-level abstraction)
+// ---------------------------------------------------------------------------
+
+export interface CanopySidecar {
+  name: string
+  image: string
+  cpu: number // millicores
+  memory: number // bytes
+  port?: number
+  envVars: Record<string, string>
+  command?: string
+}
+
+export interface CanopySecretBinding {
+  name: string
+  target: 'env' | 'file'
+  env?: string // env var name (when target = 'env')
+  path?: string // mount path (when target = 'file')
+}
+
+export interface CanopyServiceConfig {
+  name: string
+  namespace: string
+  type: 'web' | 'worker' | 'cron' | 'custom'
+  image: string
+  port?: number
+  replicas: number
+  cpu: number // millicores
+  memory: number // bytes
+  healthCheckPath?: string
+  healthCheckType?: 'http' | 'tcp' | 'script'
+  deploymentStrategy: 'rolling' | 'recreate' | 'blue_green' | 'canary'
+  envVars: Record<string, string>
+  secrets: CanopySecretBinding[]
+  labels: Record<string, string>
+  command?: string
+  sidecars: CanopySidecar[]
+}
+
+// ---------------------------------------------------------------------------
+// Duration helpers (Trellis uses nanoseconds)
+// ---------------------------------------------------------------------------
+
+const NS_PER_SECOND = 1_000_000_000
+const NS_PER_MINUTE = 60 * NS_PER_SECOND
+
+// ---------------------------------------------------------------------------
+// Default health-check values
+// ---------------------------------------------------------------------------
+
+const DEFAULT_HEALTH_CHECK_INTERVAL = 10 * NS_PER_SECOND
+const DEFAULT_HEALTH_CHECK_TIMEOUT = 2 * NS_PER_SECOND
+const DEFAULT_HEALTH_CHECK_INITIAL_DELAY = 5 * NS_PER_SECOND
+const DEFAULT_HEALTH_CHECK_SUCCESS_THRESHOLD = 1
+const DEFAULT_HEALTH_CHECK_FAILURE_THRESHOLD = 3
+
+// ---------------------------------------------------------------------------
+// Worker restart defaults
+// ---------------------------------------------------------------------------
+
+const WORKER_MAX_RESTARTS = 3
+const WORKER_RESTART_WINDOW = 5 * NS_PER_MINUTE
+
+// ---------------------------------------------------------------------------
+// Builder
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert a Canopy service configuration into a Trellis JobSpec that can be
+ * submitted to `POST /v1/jobs` (or `/v1/jobs/plan`).
+ */
+export function buildJobSpec(config: CanopyServiceConfig): TrellisJobSpec {
+  const primaryTask = buildPrimaryTask(config)
+  const sidecarTasks = config.sidecars.map((s) => buildSidecarTask(s))
+  const tasks = [primaryTask, ...sidecarTasks]
+
+  const labels: Record<string, string> = {
+    ...config.labels,
+    'canopy/managed': 'true',
+    'canopy/service': config.name,
+  }
+
+  const taskGroup: TrellisTaskGroup = {
+    name: config.name,
+    count: config.replicas,
+    labels,
+    tasks,
+  }
+
+  // Restart policy — workers and crons get an explicit restart policy
+  const restart = buildRestartPolicy(config)
+  if (restart) {
+    taskGroup.restart = restart
+  }
+
+  // Update strategy
+  const update = buildUpdateStrategy(config)
+  if (update) {
+    taskGroup.update = update
+  }
+
+  return {
+    name: config.name,
+    namespace: config.namespace,
+    task_groups: [taskGroup],
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Task builders
+// ---------------------------------------------------------------------------
+
+function buildPrimaryTask(config: CanopyServiceConfig): TrellisTask {
+  const task: TrellisTask = {
+    name: config.name,
+    image: config.image,
+    resources: {
+      cpu: config.cpu,
+      memory: config.memory,
+    },
+  }
+
+  if (config.command) {
+    task.command = config.command
+  }
+
+  // Environment variables
+  if (Object.keys(config.envVars).length > 0) {
+    task.env = { ...config.envVars }
+  }
+
+  // Secrets
+  if (config.secrets.length > 0) {
+    task.secrets = config.secrets.map(buildSecretRef)
+  }
+
+  // Networking — web services get host networking + port
+  const networking = buildNetworking(config)
+  if (networking) {
+    task.networking = networking
+  }
+
+  // Health check
+  const healthCheck = buildHealthCheck(config)
+  if (healthCheck) {
+    task.health_check = healthCheck
+  }
+
+  return task
+}
+
+function buildSidecarTask(sidecar: CanopySidecar): TrellisTask {
+  const task: TrellisTask = {
+    name: sidecar.name,
+    image: sidecar.image,
+    resources: {
+      cpu: sidecar.cpu,
+      memory: sidecar.memory,
+    },
+  }
+
+  if (sidecar.command) {
+    task.command = sidecar.command
+  }
+
+  if (Object.keys(sidecar.envVars).length > 0) {
+    task.env = { ...sidecar.envVars }
+  }
+
+  if (sidecar.port !== undefined) {
+    task.networking = {
+      mode: 'host',
+      ports: [{ port: sidecar.port }],
+    }
+  }
+
+  return task
+}
+
+// ---------------------------------------------------------------------------
+// Sub-builders
+// ---------------------------------------------------------------------------
+
+function buildSecretRef(binding: CanopySecretBinding): TrellisSecretRef {
+  const ref: TrellisSecretRef = {
+    name: binding.name,
+    target: binding.target,
+  }
+  if (binding.target === 'env' && binding.env) {
+    ref.env = binding.env
+  }
+  if (binding.target === 'file' && binding.path) {
+    ref.path = binding.path
+  }
+  return ref
+}
+
+function buildNetworking(config: CanopyServiceConfig): TrellisNetworking | null {
+  if (config.type !== 'web') {
+    return null
+  }
+
+  const networking: TrellisNetworking = {
+    mode: 'host',
+  }
+
+  if (config.port !== undefined) {
+    networking.ports = [{ port: config.port }]
+  }
+
+  return networking
+}
+
+function buildHealthCheck(config: CanopyServiceConfig): TrellisHealthCheck | null {
+  if (config.type !== 'web') {
+    return null
+  }
+
+  const checkType = config.healthCheckType ?? 'http'
+
+  const check: TrellisHealthCheck = {
+    type: checkType,
+    interval: DEFAULT_HEALTH_CHECK_INTERVAL,
+    timeout: DEFAULT_HEALTH_CHECK_TIMEOUT,
+    initial_delay: DEFAULT_HEALTH_CHECK_INITIAL_DELAY,
+    success_threshold: DEFAULT_HEALTH_CHECK_SUCCESS_THRESHOLD,
+    failure_threshold: DEFAULT_HEALTH_CHECK_FAILURE_THRESHOLD,
+  }
+
+  if (checkType === 'http') {
+    check.path = config.healthCheckPath ?? '/'
+    if (config.port !== undefined) {
+      check.port = config.port
+    }
+  }
+
+  if (checkType === 'tcp') {
+    if (config.port !== undefined) {
+      check.port = config.port
+    }
+  }
+
+  return check
+}
+
+function buildRestartPolicy(
+  config: CanopyServiceConfig,
+): TrellisRestartPolicy | null {
+  if (config.type === 'worker' || config.type === 'cron') {
+    return {
+      max_restarts: WORKER_MAX_RESTARTS,
+      window: WORKER_RESTART_WINDOW,
+    }
+  }
+  return null
+}
+
+function buildUpdateStrategy(
+  config: CanopyServiceConfig,
+): TrellisUpdateStrategy | null {
+  switch (config.deploymentStrategy) {
+    case 'rolling':
+      return { strategy: 'rolling', max_parallel: 1 }
+    case 'recreate':
+      return { strategy: 'recreate' }
+    case 'blue_green':
+    case 'canary':
+      // blue-green and canary are orchestrated at the Canopy level;
+      // the underlying Trellis job uses a rolling strategy.
+      return { strategy: 'rolling', max_parallel: 1 }
+    default:
+      return null
+  }
+}

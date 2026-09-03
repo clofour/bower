@@ -1,0 +1,285 @@
+// ---------------------------------------------------------------------------
+// TrellisClient — HTTP client for the Trellis container orchestrator API
+// ---------------------------------------------------------------------------
+
+import type {
+  TrellisWhoAmI,
+  TrellisNode,
+  TrellisJob,
+  TrellisJobSpec,
+  TrellisApplyJobResponse,
+  TrellisPlan,
+  TrellisAllocation,
+  TrellisEvent,
+  TrellisSecret,
+} from '@/types/trellis'
+
+// ---------------------------------------------------------------------------
+// Error type
+// ---------------------------------------------------------------------------
+
+export class TrellisApiError extends Error {
+  public readonly status: number
+  public readonly statusText: string
+  public readonly body: string
+
+  constructor(status: number, statusText: string, body: string) {
+    super(`Trellis API error ${status} (${statusText}): ${body}`)
+    this.name = 'TrellisApiError'
+    this.status = status
+    this.statusText = statusText
+    this.body = body
+  }
+
+  /** Attempt to parse the response body as JSON. Returns undefined on failure. */
+  get json(): Record<string, unknown> | undefined {
+    try {
+      return JSON.parse(this.body) as Record<string, unknown>
+    } catch {
+      return undefined
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Client
+// ---------------------------------------------------------------------------
+
+export class TrellisClient {
+  private readonly baseUrl: string
+  private readonly token: string
+
+  constructor(apiUrl: string, token: string) {
+    // Normalise: strip trailing slashes so callers don't need to worry
+    this.baseUrl = apiUrl.replace(/\/+$/, '')
+    this.token = token
+  }
+
+  // -------------------------------------------------------------------------
+  // Internal helpers
+  // -------------------------------------------------------------------------
+
+  private headers(namespace?: string): Record<string, string> {
+    const h: Record<string, string> = {
+      Authorization: `Bearer ${this.token}`,
+    }
+    if (namespace) {
+      h['X-Trellis-Namespace'] = namespace
+    }
+    return h
+  }
+
+  private headersJson(namespace?: string): Record<string, string> {
+    return {
+      ...this.headers(namespace),
+      'Content-Type': 'application/json',
+    }
+  }
+
+  /** Perform a request and throw TrellisApiError on non-2xx responses. */
+  private async request<T>(
+    method: string,
+    path: string,
+    options?: {
+      body?: unknown
+      namespace?: string
+      headers?: Record<string, string>
+      rawText?: boolean
+    },
+  ): Promise<T> {
+    const url = `${this.baseUrl}${path}`
+    const hasBody = options?.body !== undefined
+
+    const fetchHeaders = hasBody
+      ? this.headersJson(options?.namespace)
+      : this.headers(options?.namespace)
+
+    if (options?.headers) {
+      Object.assign(fetchHeaders, options.headers)
+    }
+
+    const res = await fetch(url, {
+      method,
+      headers: fetchHeaders,
+      body: hasBody ? JSON.stringify(options!.body) : undefined,
+    })
+
+    if (!res.ok) {
+      const errorBody = await res.text()
+      throw new TrellisApiError(res.status, res.statusText, errorBody)
+    }
+
+    // Some endpoints return 204 No Content
+    if (res.status === 204) {
+      return undefined as unknown as T
+    }
+
+    if (options?.rawText) {
+      return (await res.text()) as unknown as T
+    }
+
+    return (await res.json()) as T
+  }
+
+  // -------------------------------------------------------------------------
+  // Auth
+  // -------------------------------------------------------------------------
+
+  async whoami(): Promise<TrellisWhoAmI> {
+    return this.request<TrellisWhoAmI>('GET', '/v1/auth/whoami')
+  }
+
+  // -------------------------------------------------------------------------
+  // Nodes
+  // -------------------------------------------------------------------------
+
+  async listNodes(): Promise<TrellisNode[]> {
+    return this.request<TrellisNode[]>('GET', '/v1/nodes')
+  }
+
+  async drainNode(id: string): Promise<void> {
+    await this.request<void>('POST', `/v1/nodes/${encodeURIComponent(id)}/drain`)
+  }
+
+  async undrainNode(id: string): Promise<void> {
+    await this.request<void>('DELETE', `/v1/nodes/${encodeURIComponent(id)}/drain`)
+  }
+
+  // -------------------------------------------------------------------------
+  // Jobs
+  // -------------------------------------------------------------------------
+
+  async listJobs(namespace?: string): Promise<TrellisJob[]> {
+    return this.request<TrellisJob[]>('GET', '/v1/jobs', { namespace })
+  }
+
+  async getJob(name: string, namespace?: string): Promise<TrellisJob> {
+    return this.request<TrellisJob>('GET', `/v1/jobs/${encodeURIComponent(name)}`, {
+      namespace,
+    })
+  }
+
+  async applyJob(
+    spec: TrellisJobSpec,
+    namespace?: string,
+  ): Promise<TrellisApplyJobResponse> {
+    return this.request<TrellisApplyJobResponse>('POST', '/v1/jobs', {
+      body: { spec },
+      namespace,
+    })
+  }
+
+  async planJob(
+    spec: TrellisJobSpec,
+    namespace?: string,
+  ): Promise<TrellisPlan> {
+    return this.request<TrellisPlan>('POST', '/v1/jobs/plan', {
+      body: { spec },
+      namespace,
+    })
+  }
+
+  async deleteJob(name: string, namespace?: string): Promise<void> {
+    await this.request<void>('DELETE', `/v1/jobs/${encodeURIComponent(name)}`, {
+      namespace,
+    })
+  }
+
+  // -------------------------------------------------------------------------
+  // Namespaces
+  // -------------------------------------------------------------------------
+
+  async listNamespaces(): Promise<string[]> {
+    return this.request<string[]>('GET', '/v1/namespaces')
+  }
+
+  // -------------------------------------------------------------------------
+  // Allocations
+  // -------------------------------------------------------------------------
+
+  async listAllocations(
+    filters?: { namespace?: string; label?: string },
+  ): Promise<TrellisAllocation[]> {
+    const params = new URLSearchParams()
+    if (filters?.label) {
+      params.set('label', filters.label)
+    }
+    const qs = params.toString()
+    const path = qs ? `/v1/allocations?${qs}` : '/v1/allocations'
+    return this.request<TrellisAllocation[]>('GET', path, {
+      namespace: filters?.namespace,
+    })
+  }
+
+  async getAllocationEvents(id: string): Promise<TrellisEvent[]> {
+    return this.request<TrellisEvent[]>(
+      'GET',
+      `/v1/allocations/${encodeURIComponent(id)}/events`,
+    )
+  }
+
+  async getAllocationLogs(
+    id: string,
+    task: string,
+    tail?: number,
+  ): Promise<string> {
+    const params = new URLSearchParams()
+    params.set('task', task)
+    if (tail !== undefined) {
+      params.set('tail', String(tail))
+    }
+    return this.request<string>(
+      'GET',
+      `/v1/allocations/${encodeURIComponent(id)}/logs?${params.toString()}`,
+      { rawText: true },
+    )
+  }
+
+  // -------------------------------------------------------------------------
+  // Secrets
+  // -------------------------------------------------------------------------
+
+  async listSecrets(namespace: string): Promise<TrellisSecret[]> {
+    return this.request<TrellisSecret[]>(
+      'GET',
+      `/v1/namespaces/${encodeURIComponent(namespace)}/secrets`,
+    )
+  }
+
+  async getSecret(namespace: string, name: string): Promise<TrellisSecret> {
+    return this.request<TrellisSecret>(
+      'GET',
+      `/v1/namespaces/${encodeURIComponent(namespace)}/secrets/${encodeURIComponent(name)}`,
+    )
+  }
+
+  async setSecret(
+    namespace: string,
+    name: string,
+    value: string,
+    expectedVersion?: number,
+  ): Promise<void> {
+    // The API expects the value as base64
+    const value_base64 = Buffer.from(value, 'utf-8').toString('base64')
+
+    await this.request<void>(
+      'PUT',
+      `/v1/namespaces/${encodeURIComponent(namespace)}/secrets/${encodeURIComponent(name)}`,
+      {
+        body: {
+          value_base64,
+          ...(expectedVersion !== undefined
+            ? { expected_version: expectedVersion }
+            : {}),
+        },
+      },
+    )
+  }
+
+  async deleteSecret(namespace: string, name: string): Promise<void> {
+    await this.request<void>(
+      'DELETE',
+      `/v1/namespaces/${encodeURIComponent(namespace)}/secrets/${encodeURIComponent(name)}`,
+    )
+  }
+}
