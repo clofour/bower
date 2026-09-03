@@ -24,15 +24,11 @@ Canopy is an opinionated deployment dashboard built on top of [Trellis](https://
 
 The `trellis.yml` below includes a bundled Postgres container so you can get running without an external database. It uses host networking and assumes both task groups land on the same node, so it works as-is on a single-node cluster. For multi-node clusters, replace the `db` task group with an external database and store the connection string as a Trellis secret instead. For a demo, data persists across container crashes but is lost if the allocation is replaced.
 
-#### 1. Create the namespace and encryption key secret
+#### 1. Set the encryption key secret
 
 ```bash
-trellisctl namespaces create platform
-
-# Generate a stable 32-byte key — must be identical across all Canopy instances
-openssl rand -hex 32
-
-trellisctl secrets set encryption-key --namespace platform "<key from above>"
+# Generate a stable 32-byte key and store it — must be identical across all Canopy instances
+openssl rand -hex 32 | trellisctl --namespace platform secrets set encryption-key --stdin
 ```
 
 #### 2. Apply `trellis.yml`
@@ -102,19 +98,21 @@ task_groups:
 ```
 
 ```bash
-trellisctl jobs apply trellis.yml
+trellisctl jobs apply --file trellis.yml
 ```
 
 #### 3. Run migrations
 
-Migrations must complete before the Canopy container serves traffic:
+The production container is a Next.js standalone build and does not include the migration script. Run migrations from a local clone once the `db` allocation is healthy:
 
 ```bash
-docker run --rm \
-  -e DATABASE_URL="postgres://canopy:canopy@<node-ip>:5432/canopy" \
-  ghcr.io/clofour/canopy:latest \
-  node -e "require('./src/db/migrate')"
+git clone https://github.com/clofour/trellis-dashboard.git
+cd trellis-dashboard
+npm install
+DATABASE_URL="postgres://canopy:canopy@<node-ip>:5432/canopy" npm run db:migrate
 ```
+
+The Canopy container will restart until migrations complete, then converge to healthy. Check progress with `trellisctl jobs status canopy`.
 
 #### 4. Finish setup
 
