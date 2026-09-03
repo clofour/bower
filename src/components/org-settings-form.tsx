@@ -53,7 +53,7 @@ export function OrgSettingsForm({
       <Card className="mt-6 p-5">
         <h3 className="font-medium">Trellis Connection</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Connect Canopy to your Trellis cluster API.
+          Connect Bower to your Trellis cluster API.
         </p>
         <div className="mt-4 space-y-4">
           <div className="space-y-2">

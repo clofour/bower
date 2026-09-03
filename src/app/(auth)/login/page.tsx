@@ -43,7 +43,7 @@ export default function LoginPage() {
           </svg>
         </div>
         <span className="text-lg font-bold tracking-tight text-foreground">
-          Canopy
+          Bower
         </span>
       </div>
 

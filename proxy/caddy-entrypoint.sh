@@ -1,3 +1,3 @@
 #!/bin/sh
 set -eu
-exec caddy run --config /run/trellis-secrets/CANOPY_CADDYFILE --adapter caddyfile
+exec caddy run --config /run/trellis-secrets/BOWER_CADDYFILE --adapter caddyfile

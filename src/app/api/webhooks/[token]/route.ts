@@ -21,7 +21,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
   const { token } = await params; const raw = await request.text(); const tokenHash = createHash('sha256').update(token).digest('hex')
   const [hook] = await db.select().from(webhookEndpoints).where(eq(webhookEndpoints.tokenHash, tokenHash)).limit(1)
   if (!hook?.isActive) return Response.json({ error: 'Webhook not found.' }, { status: 404 })
-  const supplied = (request.headers.get('x-canopy-signature') || request.headers.get('x-hub-signature-256') || '').replace(/^sha256=/, '')
+  const supplied = (request.headers.get('x-bower-signature') || request.headers.get('x-hub-signature-256') || '').replace(/^sha256=/, '')
   const expected = createHmac('sha256', token).update(raw).digest('hex')
   if (supplied.length !== expected.length || !timingSafeEqual(Buffer.from(supplied), Buffer.from(expected))) return Response.json({ error: 'Invalid signature.' }, { status: 401 })
   let payload: Record<string, unknown>; try { payload = JSON.parse(raw) as Record<string, unknown> } catch { return Response.json({ error: 'Invalid JSON.' }, { status: 400 }) }

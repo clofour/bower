@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Canopy",
+  title: "Bower",
   description: "Deploy with confidence.",
 };
 

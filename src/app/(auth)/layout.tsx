@@ -98,7 +98,7 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
                 <path d="M12 3l-1.912 5.813a2 2 0 01-1.275 1.275L3 12l5.813 1.912a2 2 0 011.275 1.275L12 21l1.912-5.813a2 2 0 011.275-1.275L21 12l-5.813-1.912a2 2 0 01-1.275-1.275L12 3z" />
               </svg>
             </div>
-            <span className="text-xl font-bold tracking-tight">Canopy</span>
+            <span className="text-xl font-bold tracking-tight">Bower</span>
           </div>
         </div>
 
@@ -117,7 +117,7 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
 
         {/* Footer */}
         <p className="relative z-10 text-xs text-white/30">
-          &copy; {new Date().getFullYear()} Canopy
+          &copy; {new Date().getFullYear()} Bower
         </p>
       </div>
 

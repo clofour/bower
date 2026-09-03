@@ -7,7 +7,7 @@ import { users, sessions } from '@/db/schema'
 import type { User, Session } from '@/types/auth'
 
 const BCRYPT_ROUNDS = 12
-const SESSION_COOKIE_NAME = 'canopy_session'
+const SESSION_COOKIE_NAME = 'bower_session'
 const SESSION_DURATION_DAYS = 30
 
 export async function hashPassword(password: string): Promise<string> {

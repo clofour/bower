@@ -12,7 +12,7 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: postgres://canopy:canopy@localhost:5432/canopy
+      DATABASE_URL: postgres://bower:bower@localhost:5432/bower
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

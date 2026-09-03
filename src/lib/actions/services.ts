@@ -8,7 +8,7 @@ import { deployments, environments, secretsMetadata, serviceConfigs, services, s
 import { getCurrentUser } from '@/lib/auth'
 import { getProjectBySlug, getUserOrganization } from '@/lib/queries'
 import { getTrellisClient } from '@/lib/trellis-instance'
-import type { CanopySecretBinding } from '@/lib/job-builder'
+import type { BowerSecretBinding } from '@/lib/job-builder'
 import { recordAudit, requireProject, requireService } from '@/lib/actions/shared'
 import { syncManagedProxy } from '@/lib/managed-proxy'
 import { createDeploymentSpec, notifyDeployment, recordDeploymentEvent } from '@/lib/deployment-runtime'
@@ -57,7 +57,7 @@ async function executeDeployment(serviceId: string, environmentId: string, trigg
     const weight = steps[0] ?? 10
     const replicas = Math.max(1, Math.ceil(row.config.replicas * weight / 100))
     initialCanary = { weight, replicas }
-    spec = (await createDeploymentSpec(serviceId, environmentId, jobName, { replicas, labels: { 'trellis/weight': String(weight), 'canopy/canary': 'true' } })).spec
+    spec = (await createDeploymentSpec(serviceId, environmentId, jobName, { replicas, labels: { 'trellis/weight': String(weight), 'bower/canary': 'true' } })).spec
   }
   const [deployment] = await db.insert(deployments).values({
     serviceId, environmentId, imageAfter: row.config.image, imageBefore: previous?.imageAfter ?? null,
@@ -105,7 +105,7 @@ export async function createServiceAction(projectSlug: string, formData: FormDat
     healthCheckPath: type === 'web' ? String(template.healthCheckPath ?? '/health') : (typeof template.healthCheckPath === 'string' ? template.healthCheckPath : null),
     healthCheckCommand: (template.healthCheckCommand ?? []) as string[], healthCheckInterval: Number(template.healthCheckInterval ?? 10), healthCheckTimeout: Number(template.healthCheckTimeout ?? 2), healthCheckThreshold: Number(template.healthCheckThreshold ?? 3),
     envVars: (template.envVars ?? {}) as Record<string, string>, labels: (template.labels ?? {}) as Record<string, string>, command: typeof template.command === 'string' ? template.command : null,
-    volumes: (template.volumes ?? []) as TrellisVolume[], secretBindings: (template.secretBindings ?? []) as CanopySecretBinding[], rawConfig: template.rawConfig as TrellisJobSpec | undefined,
+    volumes: (template.volumes ?? []) as TrellisVolume[], secretBindings: (template.secretBindings ?? []) as BowerSecretBinding[], rawConfig: template.rawConfig as TrellisJobSpec | undefined,
     cronSchedule: typeof template.cronSchedule === 'string' ? template.cronSchedule : null, autoRollbackSeconds: Number(template.autoRollbackSeconds ?? 300), canarySteps: (template.canarySteps ?? [10, 25, 50, 100]) as number[],
   }))).returning() : []
   const templateSidecars = Array.isArray(template.sidecars) ? template.sidecars as Array<{ name: string; image: string; cpu?: number; memory?: number; port?: number; envVars?: Record<string, string>; command?: string }> : []
@@ -177,7 +177,7 @@ export async function updateServiceConfigAction(serviceId: string, environmentId
   const image = String(formData.get('image') ?? '').trim(); const replicas = Number(formData.get('replicas')); if (!image || !Number.isInteger(replicas) || replicas < 0) throw new Error('A valid image and replica count are required.')
   const tier = String(formData.get('resourceTier') ?? 'custom') as 'small' | 'medium' | 'large' | 'xl' | 'custom'; const tiers = { small: [100, 134217728], medium: [250, 268435456], large: [500, 536870912], xl: [1000, 1073741824] } as const
   const cpu = tier === 'custom' ? Number(formData.get('cpu')) : tiers[tier][0]; const memory = tier === 'custom' ? Number(formData.get('memory')) * 1048576 : tiers[tier][1]
-  const secretBindings = jsonField<CanopySecretBinding[]>(formData, 'secretBindings', [])
+  const secretBindings = jsonField<BowerSecretBinding[]>(formData, 'secretBindings', [])
   const availableSecrets = await db.select({ name: secretsMetadata.trellisSecretName }).from(secretsMetadata).where(eq(secretsMetadata.environmentId, environmentId)); const allowedSecrets = new Set(availableSecrets.map((item) => item.name))
   const invalidSecret = secretBindings.find((binding) => !allowedSecrets.has(binding.name)); if (invalidSecret) throw new Error(`Secret ${invalidSecret.name} does not exist in this environment.`)
   const after = { image, replicas, port: Number(formData.get('port')) || null, resourceTier: tier, cpu, memory, deploymentStrategy: String(formData.get('strategy')) as 'rolling' | 'recreate' | 'blue_green' | 'canary', healthCheckType: (String(formData.get('healthType') ?? '') || null) as 'http' | 'tcp' | 'script' | null, healthCheckPath: String(formData.get('healthPath') ?? '').trim() || null, healthCheckCommand: String(formData.get('healthCommand') ?? '').trim().split(/\s+/).filter(Boolean), healthCheckInterval: Number(formData.get('healthInterval')) || 10, healthCheckTimeout: Number(formData.get('healthTimeout')) || 2, healthCheckThreshold: Number(formData.get('healthThreshold')) || 3, envVars: linesToRecord(String(formData.get('envVars') ?? '')), labels: linesToRecord(String(formData.get('labels') ?? '')), command: String(formData.get('command') ?? '').trim() || null, volumes: jsonField<TrellisVolume[]>(formData, 'volumes', []), secretBindings, rawConfig: jsonField<TrellisJobSpec | null>(formData, 'rawConfig', null), cronSchedule: String(formData.get('cronSchedule') ?? '').trim() || null, autoRollbackSeconds: Math.max(30, Number(formData.get('autoRollbackSeconds')) || 300), canarySteps: jsonField<number[]>(formData, 'canarySteps', [10, 25, 50, 100]), updatedAt: new Date() }
