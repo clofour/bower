@@ -4,14 +4,15 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { and, desc, eq } from 'drizzle-orm'
 import { db } from '@/db'
-import { deploymentEvents, deployments, environments, projects, secretsMetadata, serviceConfigs, services, sidecars, users } from '@/db/schema'
+import { deployments, environments, secretsMetadata, serviceConfigs, services, sidecars } from '@/db/schema'
 import { getCurrentUser } from '@/lib/auth'
-import { getDeploymentsByProject, getProjectBySlug, getUserOrganization } from '@/lib/queries'
+import { getProjectBySlug, getUserOrganization } from '@/lib/queries'
 import { getTrellisClient } from '@/lib/trellis-instance'
-import { buildJobSpec, type CanopySecretBinding, type CanopySidecar } from '@/lib/job-builder'
+import type { CanopySecretBinding } from '@/lib/job-builder'
 import { recordAudit, requireProject, requireService } from '@/lib/actions/shared'
-import { sendDeploymentNotifications } from '@/lib/notifications'
 import { syncManagedProxy } from '@/lib/managed-proxy'
+import { createDeploymentSpec, notifyDeployment, recordDeploymentEvent } from '@/lib/deployment-runtime'
+import { reconcileProjectDeployments } from '@/lib/deployment-reconciler'
 import type { TrellisJobSpec, TrellisVolume } from '@/types/trellis'
 
 type Trigger = 'manual' | 'webhook' | 'promotion' | 'rollback' | 'auto_rollback'
@@ -37,75 +38,47 @@ function jsonField<T>(formData: FormData, key: string, fallback: T): T {
   try { return JSON.parse(value) as T } catch { throw new Error(`${key} must contain valid JSON.`) }
 }
 
-async function createSpec(serviceId: string, environmentId: string, jobName?: string, overrides?: { replicas?: number; labels?: Record<string, string> }) {
-  const [row] = await db.select({ config: serviceConfigs, service: services, environment: environments, project: projects })
-    .from(serviceConfigs)
-    .innerJoin(services, eq(services.id, serviceConfigs.serviceId))
-    .innerJoin(environments, eq(environments.id, serviceConfigs.environmentId))
-    .innerJoin(projects, eq(projects.id, services.projectId))
-    .where(and(eq(serviceConfigs.serviceId, serviceId), eq(serviceConfigs.environmentId, environmentId))).limit(1)
-  if (!row) throw new Error('Service configuration was not found.')
-  const attached = await db.select().from(sidecars).where(eq(sidecars.serviceConfigId, row.config.id))
-  const spec = buildJobSpec({
-    name: jobName || row.service.slug, serviceLabel: row.service.slug, namespace: row.environment.trellisNamespace, type: row.service.type,
-    image: row.config.image, port: row.config.port ?? undefined, replicas: overrides?.replicas ?? row.config.replicas,
-    cpu: row.config.cpu, memory: row.config.memory, healthCheckPath: row.config.healthCheckPath ?? undefined,
-    healthCheckType: row.config.healthCheckType ?? undefined, healthCheckCommand: row.config.healthCheckCommand as string[],
-    healthCheckInterval: row.config.healthCheckInterval, healthCheckTimeout: row.config.healthCheckTimeout,
-    healthCheckThreshold: row.config.healthCheckThreshold, deploymentStrategy: row.config.deploymentStrategy,
-    envVars: row.config.envVars as Record<string, string>,
-    labels: { ...(row.config.labels as Record<string, string>), ...overrides?.labels }, command: row.config.command ?? undefined,
-    secrets: [...Object.entries(row.environment.envVars as Record<string, string>).map(([env, name]) => ({ name, target: 'env' as const, env })), ...(row.config.secretBindings as CanopySecretBinding[])], volumes: row.config.volumes as TrellisVolume[],
-    sidecars: attached.map((item) => ({ name: item.name, image: item.image, cpu: item.cpu, memory: item.memory, port: item.port ?? undefined, envVars: item.envVars as Record<string, string>, command: item.command ?? undefined })) as CanopySidecar[],
-    rawConfig: row.config.rawConfig as TrellisJobSpec | undefined,
-  })
-  return { ...row, spec }
-}
-
-async function event(deploymentId: string, type: string, message: string, details: Record<string, unknown> = {}) {
-  await db.insert(deploymentEvents).values({ deploymentId, type, message, details })
-}
-
-async function notify(row: Awaited<ReturnType<typeof createSpec>>, status: string, userId?: string | null) {
-  const [user] = userId ? await db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, userId)).limit(1) : []
-  await sendDeploymentNotifications(row.project.id, { service: row.service.name, environment: row.environment.name, image: row.config.image, status, user: user?.name || user?.email || 'automation', timestamp: new Date().toISOString() })
-}
-
 async function executeDeployment(serviceId: string, environmentId: string, triggerType: Trigger, userId?: string | null) {
-  const row = await createSpec(serviceId, environmentId)
+  const row = await createDeploymentSpec(serviceId, environmentId)
   if (row.service.type === 'cron') throw new Error('Cron deployments are not yet available in Trellis.')
   if (row.environment.isLocked && triggerType === 'webhook') throw new Error('This environment is locked and requires an administrator.')
   const [previous] = await db.select().from(deployments).where(and(eq(deployments.serviceId, serviceId), eq(deployments.environmentId, environmentId), eq(deployments.status, 'healthy'))).orderBy(desc(deployments.createdAt)).limit(1)
   let jobName = row.service.slug
   let spec = row.spec
+  let initialCanary: { weight: number; replicas: number } | null = null
   if (row.config.deploymentStrategy === 'blue_green') {
     const active = row.config.activeJobName || row.service.slug
     jobName = active.endsWith('-blue') ? `${row.service.slug}-green` : `${row.service.slug}-blue`
-    spec = (await createSpec(serviceId, environmentId, jobName)).spec
+    spec = (await createDeploymentSpec(serviceId, environmentId, jobName)).spec
   } else if (row.config.deploymentStrategy === 'canary') {
     const active = row.config.activeJobName || row.service.slug
     jobName = active.endsWith('-canary-a') ? `${row.service.slug}-canary-b` : `${row.service.slug}-canary-a`
-    spec = (await createSpec(serviceId, environmentId, jobName, { replicas: 1, labels: { 'trellis/weight': '10', 'canopy/canary': 'true' } })).spec
+    const steps = [...new Set(row.config.canarySteps as number[])].filter((step) => step > 0 && step <= 100).sort((a, b) => a - b)
+    const weight = steps[0] ?? 10
+    const replicas = Math.max(1, Math.ceil(row.config.replicas * weight / 100))
+    initialCanary = { weight, replicas }
+    spec = (await createDeploymentSpec(serviceId, environmentId, jobName, { replicas, labels: { 'trellis/weight': String(weight), 'canopy/canary': 'true' } })).spec
   }
   const [deployment] = await db.insert(deployments).values({
     serviceId, environmentId, imageAfter: row.config.image, imageBefore: previous?.imageAfter ?? null,
     strategy: row.config.deploymentStrategy, status: 'planning', triggeredByUserId: userId ?? null,
     triggerType, jobSpec: spec, previousJobSpec: previous?.jobSpec ?? null, trellisJobName: jobName,
   }).returning()
-  await event(deployment.id, 'planning', 'Generated Trellis JobSpec and requested a semantic plan.')
+  await recordDeploymentEvent(deployment.id, 'planning', 'Generated Trellis JobSpec and requested a semantic plan.')
   try {
     const client = await getTrellisClient(row.project.orgId)
     const plan = await client.planJob(spec, row.environment.trellisNamespace)
     await db.update(deployments).set({ status: 'deploying', planDiff: plan }).where(eq(deployments.id, deployment.id))
-    await event(deployment.id, 'deploying', `Applying ${jobName}.`, { plan })
+    await recordDeploymentEvent(deployment.id, 'deploying', `Applying ${jobName}.`, { plan })
     const result = await client.applyJob(spec, row.environment.trellisNamespace)
     if (result?.revision) await db.update(deployments).set({ trellisRevision: result.revision }).where(eq(deployments.id, deployment.id))
+    if (initialCanary) await recordDeploymentEvent(deployment.id, 'canary_step', `Canary started at ${initialCanary.weight}%.`, initialCanary)
     await recordAudit({ orgId: row.project.orgId, userId: userId ?? null, action: `deployment.${triggerType}`, resourceType: 'deployment', resourceId: deployment.id, details: { serviceId, environmentId, image: row.config.image, strategy: row.config.deploymentStrategy } })
-    await notify(row, 'deploying', userId)
+    await notifyDeployment(row, 'deploying', userId)
   } catch (error) {
     await db.update(deployments).set({ status: 'failed', completedAt: new Date() }).where(eq(deployments.id, deployment.id))
-    await event(deployment.id, 'failed', error instanceof Error ? error.message : 'Deployment failed.')
-    await notify(row, 'failed', userId)
+    await recordDeploymentEvent(deployment.id, 'failed', error instanceof Error ? error.message : 'Deployment failed.')
+    await notifyDeployment(row, 'failed', userId)
     throw error
   }
   return { deployment, row }
@@ -176,62 +149,25 @@ export async function rollbackServiceAction(serviceId: string, environmentId: st
   if (!last?.previousJobSpec) throw new Error('No stored previous JobSpec is available.')
   const spec = last.previousJobSpec as TrellisJobSpec; const [config] = await db.select().from(serviceConfigs).where(and(eq(serviceConfigs.serviceId, serviceId), eq(serviceConfigs.environmentId, environmentId))).limit(1)
   if (!config) throw new Error('Configuration not found.')
+  const replacedJob = config.activeJobName
   const image = spec.task_groups[0]?.tasks[0]?.image
   if (image) await db.update(serviceConfigs).set({ image, updatedAt: new Date() }).where(eq(serviceConfigs.id, config.id))
   const client = await getTrellisClient(access.org.id); const plan = await client.planJob(spec, spec.namespace)
   const [deployment] = await db.insert(deployments).values({ serviceId, environmentId, imageBefore: config.image, imageAfter: image || config.image, strategy: config.deploymentStrategy, status: 'deploying', triggeredByUserId: access.user.id, triggerType: 'rollback', planDiff: plan, jobSpec: spec, previousJobSpec: last.jobSpec, trellisJobName: spec.name }).returning()
-  await client.applyJob(spec, spec.namespace); await event(deployment.id, 'rollback', 'Re-applied the exact previous JobSpec.')
-  await notify(await createSpec(serviceId, environmentId), 'deploying', access.user.id)
+  await client.applyJob(spec, spec.namespace)
+  if (config.deploymentStrategy === 'blue_green' || config.deploymentStrategy === 'canary') {
+    await db.update(serviceConfigs).set({ activeJobName: spec.name, updatedAt: new Date() }).where(eq(serviceConfigs.id, config.id))
+    await syncManagedProxy(access.project.id, environmentId, access.org.id)
+    if (replacedJob && replacedJob !== spec.name) await client.deleteJob(replacedJob, spec.namespace).catch(() => undefined)
+  }
+  await recordDeploymentEvent(deployment.id, 'rollback', 'Re-applied the exact previous JobSpec.')
+  await notifyDeployment(await createDeploymentSpec(serviceId, environmentId), 'deploying', access.user.id)
   await recordAudit({ orgId: access.org.id, userId: access.user.id, action: 'service.rollback.requested', resourceType: 'deployment', resourceId: deployment.id, details: { environmentId } })
 }
 
 export async function refreshDeploymentStatusesAction(projectId: string) {
   const access = await requireProject(projectId)
-  const active = (await getDeploymentsByProject(projectId, 100)).filter(({ deployment }) => ['pending', 'planning', 'deploying'].includes(deployment.status))
-  if (!active.length || !access.org.trellisApiUrl || !access.org.trellisApiToken) return
-  const client = await getTrellisClient(access.org.id)
-  for (const item of active) {
-    const deployment = item.deployment
-    const [env] = await db.select().from(environments).where(eq(environments.id, deployment.environmentId)).limit(1)
-    const [config] = await db.select().from(serviceConfigs).where(and(eq(serviceConfigs.serviceId, deployment.serviceId), eq(serviceConfigs.environmentId, deployment.environmentId))).limit(1)
-    if (!env || !config) continue
-    try {
-      const jobName = deployment.trellisJobName || item.serviceSlug; const allocations = await client.listAllocations({ namespace: env.trellisNamespace, job: jobName })
-      const latestRevision = allocations.length ? Math.max(...allocations.map((allocation) => allocation.job_revision)) : 0
-      const currentAllocations = allocations.filter((allocation) => allocation.job_revision === latestRevision && allocation.phase !== 'stopped')
-      const failed = currentAllocations.some((allocation) => allocation.phase === 'failed' || allocation.phase === 'lost' || allocation.health === 'unhealthy')
-      const elapsed = (Date.now() - new Date(deployment.startedAt).getTime()) / 1000
-      if (failed && elapsed >= config.autoRollbackSeconds) {
-        if (deployment.previousJobSpec) {
-          const previous = deployment.previousJobSpec as TrellisJobSpec; await client.applyJob(previous, previous.namespace)
-          await db.update(deployments).set({ status: 'rolled_back', completedAt: new Date() }).where(eq(deployments.id, deployment.id)); await event(deployment.id, 'auto_rollback', 'Health threshold elapsed; restored the previous known-good JobSpec.')
-        } else {
-          await db.update(deployments).set({ status: 'failed', completedAt: new Date() }).where(eq(deployments.id, deployment.id)); await event(deployment.id, 'failed', 'Allocations failed and there is no previous JobSpec to restore.')
-        }
-        await syncManagedProxy(projectId, env.id, access.org.id).catch(() => undefined)
-        await notify(await createSpec(deployment.serviceId, deployment.environmentId), deployment.previousJobSpec ? 'rolled_back' : 'failed', deployment.triggeredByUserId)
-        continue
-      }
-      const healthy = currentAllocations.length > 0 && currentAllocations.every((allocation) => allocation.phase === 'running' && allocation.health === 'healthy')
-      if (!healthy) continue
-      if (deployment.strategy === 'canary') {
-        const steps = config.canarySteps as number[]; const existing = await db.select().from(deploymentEvents).where(eq(deploymentEvents.deploymentId, deployment.id)).orderBy(desc(deploymentEvents.createdAt))
-        const previousWeight = Number((existing.find((entry) => entry.type === 'canary_step')?.details as { weight?: number } | undefined)?.weight ?? 0); const nextWeight = steps.find((step) => step > previousWeight) ?? 100
-        if (nextWeight < 100) {
-          const replicas = Math.max(1, Math.ceil(config.replicas * nextWeight / 100)); const { spec } = await createSpec(deployment.serviceId, deployment.environmentId, jobName, { replicas, labels: { 'trellis/weight': String(nextWeight), 'canopy/canary': 'true' } })
-          await client.applyJob(spec, env.trellisNamespace); await event(deployment.id, 'canary_step', `Canary advanced to ${nextWeight}%.`, { weight: nextWeight, replicas }); continue
-        }
-        await event(deployment.id, 'canary_step', 'Canary reached 100%; traffic switched atomically.', { weight: 100 })
-      }
-      if (deployment.strategy === 'blue_green' || deployment.strategy === 'canary') {
-        const oldJob = config.activeJobName || item.serviceSlug; await db.update(serviceConfigs).set({ activeJobName: jobName, updatedAt: new Date() }).where(eq(serviceConfigs.id, config.id))
-        await syncManagedProxy(projectId, env.id, access.org.id); if (oldJob !== jobName) await client.deleteJob(oldJob, env.trellisNamespace).catch(() => undefined)
-      }
-      await db.update(deployments).set({ status: 'healthy', completedAt: new Date(), trellisRevision: latestRevision }).where(eq(deployments.id, deployment.id))
-      await event(deployment.id, 'healthy', 'All allocations are running and healthy.', { allocations: currentAllocations.map((allocation) => ({ id: allocation.id, phase: allocation.phase, health: allocation.health })) })
-      await notify(await createSpec(deployment.serviceId, deployment.environmentId), 'healthy', deployment.triggeredByUserId)
-    } catch { /* preserve state while Trellis is unreachable */ }
-  }
+  await reconcileProjectDeployments(projectId, access.org.id)
   revalidatePath(`/projects/${access.project.slug}/deployments`)
 }
 

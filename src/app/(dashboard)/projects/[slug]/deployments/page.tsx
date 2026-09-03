@@ -42,7 +42,7 @@ export default async function DeploymentsPage({
 
   return (
     <div>
-      <DeploymentPoller projectId={project.id} active={deploymentList.some((item) => ['pending', 'planning', 'deploying'].includes(item.deployment.status))} />
+      <DeploymentPoller active={deploymentList.some((item) => ['pending', 'planning', 'deploying'].includes(item.deployment.status))} />
       <div className="mb-6">
         <h2 className="text-lg font-semibold">Deployments</h2>
         <p className="text-sm text-muted-foreground">

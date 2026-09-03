@@ -6,6 +6,8 @@ const token = process.env.TRELLIS_TOKEN || ''
 const namespace = process.env.TRELLIS_NAMESPACE || ''
 const caddy = process.env.CADDY_ADMIN_URL || 'http://127.0.0.1:2019/load'
 const adminPort = process.env.CADDY_ADMIN_PORT || '2019'
+const httpPort = process.env.CADDY_HTTP_PORT || '80'
+const httpsPort = process.env.CADDY_HTTPS_PORT || '443'
 const interval = Math.max(1, Number(process.env.CANOPY_SYNC_INTERVAL || 5)) * 1000
 if (!trellis || !token || !namespace) throw new Error('Trellis api_access variables are required.')
 
@@ -52,7 +54,7 @@ async function reconcile() {
     }
     lines.push('}'); return lines.join('\n')
   })
-  const config = `{\n  admin 0.0.0.0:${adminPort}\n  order rate_limit before basic_auth\n}\n\n${blocks.length ? blocks.join('\n\n') : ':80 { respond "Canopy proxy ready" 200 }'}`
+  const config = `{\n  admin 0.0.0.0:${adminPort}\n  http_port ${httpPort}\n  https_port ${httpsPort}\n  order rate_limit before basic_auth\n}\n\n${blocks.length ? blocks.join('\n\n') : `:${httpPort} { respond "Canopy proxy ready" 200 }`}`
   if (config === last) return
   const loaded = await fetch(caddy, { method: 'POST', headers: { 'content-type': 'text/caddyfile' }, body: config })
   if (!loaded.ok) throw new Error(`Caddy reload returned ${loaded.status}: ${await loaded.text()}`)

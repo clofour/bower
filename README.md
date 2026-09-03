@@ -34,10 +34,14 @@ Controls that require APIs Trellis does not expose yet are intentionally present
 
 ## Managed ingress
 
-Creating a route writes a generated Caddyfile to Trellis secrets and deploys a namespace-local Caddy + route-sync task group. The sync task uses Trellis `api_access: namespace/read`, polls healthy labeled allocations, respects canary weights, and reloads Caddy through its admin API. The two small images are defined under `proxy/` and published by the `proxy-images` workflow; override their names with `CANOPY_CADDY_IMAGE` and `CANOPY_PROXY_SYNC_IMAGE` when using another registry.
+Creating a route writes a generated Caddyfile to Trellis secrets and deploys a namespace-local Caddy + route-sync task group. The sync task uses Trellis `api_access: namespace/read`, polls healthy labeled allocations, respects canary weights, and reloads Caddy through its admin API. The two small images are defined under `proxy/` and published by the `proxy-images` workflow; override their names with `CANOPY_CADDY_IMAGE` and `CANOPY_PROXY_SYNC_IMAGE` when using another registry. Host listeners default to ports 80 and 443 and are configurable with `CANOPY_PROXY_HTTP_PORT` and `CANOPY_PROXY_HTTPS_PORT`.
 
 ## Automation
 
 API keys created in account settings authenticate `POST /api/deploy` with a bearer token. The JSON body is `{ "serviceId": "…", "environmentId": "…", "image": "…" }`. Inbound registry endpoints are created under project integrations; the endpoint token is also the HMAC-SHA256 secret and signatures are accepted through `X-Canopy-Signature` or `X-Hub-Signature-256`.
+
+## Deployment reconciliation
+
+The Next.js server watches active rollouts in the background, advances canary steps, records convergence events, and performs configured health-threshold rollbacks even when nobody has the deployment page open. `CANOPY_RECONCILE_INTERVAL` controls the polling cadence in seconds and defaults to 5.
 
 See [PLAN.md](./PLAN.md) for the product model and responsibility boundary.

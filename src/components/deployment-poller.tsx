@@ -2,15 +2,13 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { refreshDeploymentStatusesAction } from '@/lib/actions/services'
 
-export function DeploymentPoller({ projectId, active }: { projectId: string; active: boolean }) {
+export function DeploymentPoller({ active }: { active: boolean }) {
   const router = useRouter()
   useEffect(() => {
     if (!active) return
-    const poll = async () => { await refreshDeploymentStatusesAction(projectId); router.refresh() }
-    const timer = window.setInterval(poll, 5000)
+    const timer = window.setInterval(() => router.refresh(), 5000)
     return () => window.clearInterval(timer)
-  }, [active, projectId, router])
+  }, [active, router])
   return null
 }
