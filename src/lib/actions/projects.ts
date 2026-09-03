@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { eq, and } from 'drizzle-orm'
 import { db } from '@/db'
-import { projects, environments } from '@/db/schema'
+import { projects, environments, services } from '@/db/schema'
 import { getCurrentUser } from '@/lib/auth'
 import { getUserOrganization } from '@/lib/queries'
 
@@ -23,6 +23,7 @@ export async function createProjectAction(
 
   const ctx = await getUserOrganization(user.id)
   if (!ctx) return { error: 'No organization found.' }
+  if (ctx.role === 'member') return { error: 'Insufficient permissions.' }
 
   const name = formData.get('name')
   const description = formData.get('description')
@@ -90,6 +91,12 @@ export async function deleteProjectAction(
   const ctx = await getUserOrganization(user.id)
   if (!ctx) return { error: 'No organization found.' }
   if (ctx.role === 'member') return { error: 'Insufficient permissions.' }
+
+  const [service] = await db.select({ id: services.id }).from(services)
+    .where(eq(services.projectId, projectId)).limit(1)
+  const [environment] = await db.select({ id: environments.id }).from(environments)
+    .where(eq(environments.projectId, projectId)).limit(1)
+  if (service || environment) return { error: 'Delete every service and environment before deleting this project.' }
 
   await db
     .delete(projects)

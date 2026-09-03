@@ -16,16 +16,19 @@ export interface TrellisWhoAmI {
 
 export interface TrellisNode {
   id: string
+  host?: string
+  port?: number
   address: string
   status: 'healthy' | 'unhealthy' | 'draining'
   cpu: number // millicores capacity
   memory: number // bytes capacity
-  cpu_used: number
-  memory_used: number
+  cpu_used?: number
+  memory_used?: number
   os: string
   arch: string
   labels: Record<string, string>
-  host_volumes: string[]
+  host_volumes?: string[]
+  volumes?: string[]
   version: string
   last_heartbeat: string // ISO 8601
 }
@@ -34,18 +37,15 @@ export interface TrellisNode {
 
 export interface TrellisConstraint {
   attribute: string
-  operator: '=' | '!=' | 'in' | 'not_in' | 'exists' | 'not_exists'
-  value?: string
-  values?: string[]
+  value: string
 }
 
 // -- Volumes ----------------------------------------------------------------
 
 export interface TrellisVolume {
   name: string
-  type: 'host' | 'ephemeral'
-  source?: string // host path (for host volumes)
-  destination: string // mount path inside the container
+  path: string
+  host_volume?: string
   read_only?: boolean
 }
 
@@ -56,6 +56,7 @@ export interface TrellisSecretRef {
   target: 'env' | 'file'
   env?: string // environment variable name when target = 'env'
   path?: string // file path when target = 'file'
+  mode?: number
 }
 
 // -- Health checks ----------------------------------------------------------
@@ -64,12 +65,10 @@ export interface TrellisHealthCheck {
   type: 'http' | 'tcp' | 'script'
   path?: string // HTTP path (for http checks)
   port?: number // port to check (http / tcp)
-  command?: string // command to run (script checks)
-  interval: number // nanoseconds
-  timeout: number // nanoseconds
-  initial_delay?: number // nanoseconds
-  success_threshold?: number
-  failure_threshold?: number
+  command?: string[] // command to run (script checks)
+  interval?: number // nanoseconds
+  timeout?: number // nanoseconds
+  threshold?: number
 }
 
 // -- Tasks ------------------------------------------------------------------
@@ -139,14 +138,16 @@ export interface TrellisJobSpec {
 
 // -- Allocations ------------------------------------------------------------
 
-export type TrellisAllocationStatus =
-  | 'pending'
+export type TrellisAllocationPhase =
+  | 'placed'
+  | 'starting'
   | 'running'
-  | 'completed'
+  | 'stopping'
+  | 'stopped'
   | 'failed'
   | 'lost'
 
-export type TrellisHealthStatus = 'healthy' | 'unhealthy' | 'pending' | 'none'
+export type TrellisHealthStatus = 'healthy' | 'unhealthy' | 'unknown'
 
 export interface TrellisAllocationPort {
   label: string
@@ -156,15 +157,22 @@ export interface TrellisAllocationPort {
 
 export interface TrellisAllocation {
   id: string
-  job_name: string
-  task_group: string
+  job: string
+  group: string
   namespace: string
   node_id: string
-  node_address: string
-  status: TrellisAllocationStatus
+  address?: string
+  phase: TrellisAllocationPhase
   health: TrellisHealthStatus
+  draining: boolean
+  generation: number
+  job_revision: number
   created_at: string // ISO 8601
-  updated_at: string // ISO 8601
+  last_transition_at: string
+  reason?: string
+  message?: string
+  attempt: number
+  next_retry_at?: string
   ports: TrellisAllocationPort[]
   labels: Record<string, string>
   events: TrellisEvent[]
@@ -173,10 +181,10 @@ export interface TrellisAllocation {
 // -- Events -----------------------------------------------------------------
 
 export interface TrellisEvent {
-  type: string
+  phase: TrellisAllocationPhase
+  reason?: string
   message: string
-  timestamp: string // ISO 8601
-  details?: Record<string, string>
+  at: string // ISO 8601
 }
 
 // -- Jobs (full response from GET /v1/jobs/{name}) --------------------------
@@ -191,12 +199,10 @@ export type TrellisJobStatus =
 export interface TrellisJob {
   name: string
   namespace: string
-  status: TrellisJobStatus
+  status?: TrellisJobStatus
   revision: number
   spec: TrellisJobSpec
-  allocations: TrellisAllocation[]
-  created_at: string // ISO 8601
-  updated_at: string // ISO 8601
+  allocations?: TrellisAllocation[]
 }
 
 // -- Plan (response from POST /v1/jobs/plan) --------------------------------

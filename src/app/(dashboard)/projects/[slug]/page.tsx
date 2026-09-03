@@ -1,14 +1,13 @@
 import { redirect, notFound } from 'next/navigation'
-import { Layers, Plus } from 'lucide-react'
+import { Layers, ArrowUpRight, Boxes } from 'lucide-react'
+import Link from 'next/link'
 import { getCurrentUser } from '@/lib/auth'
 import {
   getUserOrganization,
   getProjectBySlug,
   getServicesByProject,
-  getEnvironmentsByProject,
 } from '@/lib/queries'
 import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { CreateServiceDialog } from '@/components/create-service-dialog'
 
 const typeColors: Record<string, string> = {
@@ -33,10 +32,7 @@ export default async function ProjectServicesPage({
   const project = await getProjectBySlug(ctx.org.id, slug)
   if (!project) notFound()
 
-  const [serviceList, envList] = await Promise.all([
-    getServicesByProject(project.id),
-    getEnvironmentsByProject(project.id),
-  ])
+  const serviceList = await getServicesByProject(project.id)
 
   return (
     <div>
@@ -61,11 +57,14 @@ export default async function ProjectServicesPage({
       ) : (
         <div className="space-y-3">
           {serviceList.map((svc) => (
-            <Card key={svc.id} className="p-4">
+            <Link key={svc.id} href={`/projects/${slug}/services/${svc.slug}`}>
+            <Card className="group overflow-hidden p-0 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+              <div className="h-1 bg-gradient-to-r from-primary via-cyan-400 to-transparent opacity-60" />
+              <div className="flex items-center justify-between p-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted">
-                    <Layers className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                    <Boxes className="h-4 w-4 text-primary" />
                   </div>
                   <div>
                     <h3 className="font-medium">{svc.name}</h3>
@@ -80,7 +79,9 @@ export default async function ProjectServicesPage({
                   </span>
                 </div>
               </div>
-            </Card>
+              <ArrowUpRight className="h-4 w-4 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" />
+              </div>
+            </Card></Link>
           ))}
         </div>
       )}

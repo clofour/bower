@@ -66,8 +66,6 @@ const NS_PER_MINUTE = 60 * NS_PER_SECOND
 
 const DEFAULT_HEALTH_CHECK_INTERVAL = 10 * NS_PER_SECOND
 const DEFAULT_HEALTH_CHECK_TIMEOUT = 2 * NS_PER_SECOND
-const DEFAULT_HEALTH_CHECK_INITIAL_DELAY = 5 * NS_PER_SECOND
-const DEFAULT_HEALTH_CHECK_SUCCESS_THRESHOLD = 1
 const DEFAULT_HEALTH_CHECK_FAILURE_THRESHOLD = 3
 
 // ---------------------------------------------------------------------------
@@ -238,9 +236,7 @@ function buildHealthCheck(config: CanopyServiceConfig): TrellisHealthCheck | nul
     type: checkType,
     interval: DEFAULT_HEALTH_CHECK_INTERVAL,
     timeout: DEFAULT_HEALTH_CHECK_TIMEOUT,
-    initial_delay: DEFAULT_HEALTH_CHECK_INITIAL_DELAY,
-    success_threshold: DEFAULT_HEALTH_CHECK_SUCCESS_THRESHOLD,
-    failure_threshold: DEFAULT_HEALTH_CHECK_FAILURE_THRESHOLD,
+    threshold: DEFAULT_HEALTH_CHECK_FAILURE_THRESHOLD,
   }
 
   if (checkType === 'http') {

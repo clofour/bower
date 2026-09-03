@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { AccountSettingsForm } from '@/components/account-settings-form'
+import { getApiKeys } from '@/lib/queries'
 
 export default async function AccountSettingsPage() {
   const user = await getCurrentUser()
@@ -15,7 +16,7 @@ export default async function AccountSettingsPage() {
         </p>
       </div>
 
-      <AccountSettingsForm userName={user.name} userEmail={user.email} />
+      <AccountSettingsForm userName={user.name} userEmail={user.email} totpEnabled={user.totpEnabled} apiKeys={await getApiKeys(user.id)} />
     </div>
   )
 }

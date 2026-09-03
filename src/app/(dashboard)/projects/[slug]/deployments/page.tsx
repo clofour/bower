@@ -7,7 +7,7 @@ import {
   getDeploymentsByProject,
 } from '@/lib/queries'
 import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { DeploymentPoller } from '@/components/deployment-poller'
 
 const statusStyles: Record<string, string> = {
   pending: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20',
@@ -37,6 +37,7 @@ export default async function DeploymentsPage({
 
   return (
     <div>
+      <DeploymentPoller projectId={project.id} active={deploymentList.some((item) => ['pending', 'planning', 'deploying'].includes(item.deployment.status))} />
       <div className="mb-6">
         <h2 className="text-lg font-semibold">Deployments</h2>
         <p className="text-sm text-muted-foreground">

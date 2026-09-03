@@ -1,11 +1,9 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, FolderKanban } from 'lucide-react'
+import { FolderKanban } from 'lucide-react'
 import { getCurrentUser } from '@/lib/auth'
 import { getUserOrganization, getProjectsByOrg } from '@/lib/queries'
-import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { CreateProjectDialog } from '@/components/create-project-dialog'
 
 export default async function ProjectsPage() {

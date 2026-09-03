@@ -75,6 +75,8 @@ export default function LoginPage() {
           />
         </div>
 
+        <div className="space-y-2"><Label htmlFor="totpCode">Authenticator code <span className="font-normal text-muted-foreground">(if enabled)</span></Label><Input id="totpCode" name="totpCode" inputMode="numeric" autoComplete="one-time-code" placeholder="000000" maxLength={6} /></div>
+
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
           <Input

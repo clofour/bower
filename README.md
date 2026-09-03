@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Canopy
 
-## Getting Started
+Canopy is an opinionated deployment dashboard built on top of [Trellis](https://github.com/clofour/trellis-experimental). It turns Trellis jobs and namespaces into projects, environments, services, promotions, routes, secrets, deployment history, teams, and an audit trail while leaving scheduling and container lifecycle in Trellis.
 
-First, run the development server:
+## Run locally
+
+Requirements: Node.js 20+, PostgreSQL, and a Trellis cluster credential with `cluster/write` access.
+
+```bash
+cp .env.example .env.local
+npm install
+npm run db:migrate
+npm run dev
+```
+
+Open `http://localhost:3000`, create the first organization owner, then add the Trellis API URL and token under **Organization**.
+
+## Commands
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm run build
+npm run db:generate
+npm run db:migrate
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Trellis support boundary
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Canopy uses Trellis directly for job planning/application, allocation lifecycle and health, logs, lifecycle events, namespace secrets, and node draining. Scaling, pause/resume, promotion, and rollback are composed from job resubmission.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Controls that require APIs Trellis does not expose yet are intentionally present but no-op: restart, revision browsing, individual allocation stop, exec, cron execution, live event streaming, and per-allocation metrics. The UI explains this at the point of use instead of presenting a broken action.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See [PLAN.md](./PLAN.md) for the product model and responsibility boundary.

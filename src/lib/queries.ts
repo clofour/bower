@@ -13,6 +13,12 @@ import {
   teamMemberships,
   teamProjectAccess,
   auditLog,
+  secretsMetadata,
+  serviceTemplates,
+  webhookEndpoints,
+  notificationChannels,
+  sidecars,
+  apiKeys,
 } from '@/db/schema'
 
 export async function getUserOrganization(userId: string) {
@@ -68,6 +74,25 @@ export async function getServiceConfigs(serviceId: string) {
     .select()
     .from(serviceConfigs)
     .where(eq(serviceConfigs.serviceId, serviceId))
+}
+
+export async function getServiceBySlug(projectId: string, slug: string) {
+  const rows = await db.select().from(services).where(and(
+    eq(services.projectId, projectId), eq(services.slug, slug),
+  )).limit(1)
+  return rows[0] ?? null
+}
+
+export async function getServiceConfigsWithEnvironments(serviceId: string) {
+  return db.select({ config: serviceConfigs, environment: environments })
+    .from(serviceConfigs)
+    .innerJoin(environments, eq(environments.id, serviceConfigs.environmentId))
+    .where(eq(serviceConfigs.serviceId, serviceId))
+    .orderBy(environments.promotionOrder)
+}
+
+export async function getSidecars(serviceConfigId: string) {
+  return db.select().from(sidecars).where(eq(sidecars.serviceConfigId, serviceConfigId))
 }
 
 export async function getDeploymentsByService(
@@ -181,4 +206,35 @@ export async function getAuditLog(orgId: string, limit = 50) {
     .where(eq(auditLog.orgId, orgId))
     .orderBy(desc(auditLog.createdAt))
     .limit(limit)
+}
+
+export async function getSecretsByProject(projectId: string) {
+  return db.select({ secret: secretsMetadata, environmentName: environments.name })
+    .from(secretsMetadata)
+    .innerJoin(environments, eq(environments.id, secretsMetadata.environmentId))
+    .where(eq(secretsMetadata.projectId, projectId))
+    .orderBy(environments.promotionOrder, secretsMetadata.name)
+}
+
+export async function getTemplates(orgId: string) {
+  const { or, isNull } = await import('drizzle-orm')
+  return db.select().from(serviceTemplates)
+    .where(or(eq(serviceTemplates.orgId, orgId), isNull(serviceTemplates.orgId)))
+    .orderBy(serviceTemplates.name)
+}
+
+export async function getProjectIntegrations(projectId: string) {
+  const serviceIds = await db.select({ id: services.id }).from(services)
+    .where(eq(services.projectId, projectId))
+  const hooks = serviceIds.length
+    ? await db.select().from(webhookEndpoints)
+      .where((await import('drizzle-orm')).inArray(webhookEndpoints.serviceId, serviceIds.map((s) => s.id)))
+    : []
+  const channels = await db.select().from(notificationChannels)
+    .where(eq(notificationChannels.projectId, projectId))
+  return { hooks, channels }
+}
+
+export async function getApiKeys(userId: string) {
+  return db.select().from(apiKeys).where(eq(apiKeys.userId, userId)).orderBy(desc(apiKeys.createdAt))
 }

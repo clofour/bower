@@ -3,6 +3,10 @@
 import { eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { organizations, users } from '@/db/schema'
+import { apiKeys } from '@/db/schema'
+import { createHash, randomBytes } from 'node:crypto'
+import { revalidatePath } from 'next/cache'
+import { createTotpSecret, verifyTotpCode } from '@/lib/totp'
 import { getCurrentUser, hashPassword, verifyPassword } from '@/lib/auth'
 import { getUserOrganization } from '@/lib/queries'
 
@@ -98,4 +102,41 @@ export async function changePasswordAction(
     .where(eq(users.id, user.id))
 
   return { success: true }
+}
+
+export async function beginTotpAction() {
+  const user = await getCurrentUser(); if (!user) return { error: 'Not authenticated.' }
+  const secret = createTotpSecret()
+  await db.update(users).set({ totpSecret: secret, totpEnabled: false, updatedAt: new Date() }).where(eq(users.id, user.id))
+  return { secret, uri: `otpauth://totp/Canopy:${encodeURIComponent(user.email)}?secret=${secret}&issuer=Canopy` }
+}
+
+export async function confirmTotpAction(code: string) {
+  const user = await getCurrentUser(); if (!user) return { error: 'Not authenticated.' }
+  const [record] = await db.select().from(users).where(eq(users.id, user.id)).limit(1)
+  if (!record?.totpSecret || !verifyTotpCode(record.totpSecret, code)) return { error: 'That code is not valid.' }
+  await db.update(users).set({ totpEnabled: true, updatedAt: new Date() }).where(eq(users.id, user.id))
+  revalidatePath('/settings/account'); return { success: true }
+}
+
+export async function disableTotpAction() {
+  const user = await getCurrentUser(); if (!user) return { error: 'Not authenticated.' }
+  await db.update(users).set({ totpSecret: null, totpEnabled: false, updatedAt: new Date() }).where(eq(users.id, user.id))
+  revalidatePath('/settings/account'); return { success: true }
+}
+
+export async function createApiKeyAction(name: string) {
+  const user = await getCurrentUser(); if (!user) return { error: 'Not authenticated.' }
+  const ctx = await getUserOrganization(user.id); if (!ctx) return { error: 'No organization found.' }
+  if (!name.trim()) return { error: 'Key name is required.' }
+  const token = `canopy_${randomBytes(24).toString('base64url')}`
+  await db.insert(apiKeys).values({ orgId: ctx.org.id, userId: user.id, name: name.trim(),
+    keyHash: createHash('sha256').update(token).digest('hex'), keyPrefix: token.slice(0, 13) })
+  revalidatePath('/settings/account'); return { token }
+}
+
+export async function revokeApiKeyAction(id: string) {
+  const user = await getCurrentUser(); if (!user) return
+  await db.delete(apiKeys).where(eq(apiKeys.id, id))
+  revalidatePath('/settings/account')
 }

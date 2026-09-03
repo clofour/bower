@@ -109,8 +109,8 @@ export class TrellisClient {
       throw new TrellisApiError(res.status, res.statusText, errorBody)
     }
 
-    // Some endpoints return 204 No Content
-    if (res.status === 204) {
+    // Trellis uses 202 and 204 for successful mutations with empty bodies.
+    if (res.status === 204 || res.headers.get('content-length') === '0') {
       return undefined as unknown as T
     }
 
@@ -118,7 +118,9 @@ export class TrellisClient {
       return (await res.text()) as unknown as T
     }
 
-    return (await res.json()) as T
+    const responseText = await res.text()
+    if (!responseText) return undefined as unknown as T
+    return JSON.parse(responseText) as T
   }
 
   // -------------------------------------------------------------------------
@@ -198,12 +200,13 @@ export class TrellisClient {
   // -------------------------------------------------------------------------
 
   async listAllocations(
-    filters?: { namespace?: string; label?: string },
+    filters?: { namespace?: string; label?: string; job?: string },
   ): Promise<TrellisAllocation[]> {
     const params = new URLSearchParams()
     if (filters?.label) {
       params.set('label', filters.label)
     }
+    if (filters?.job) params.set('job', filters.job)
     const qs = params.toString()
     const path = qs ? `/v1/allocations?${qs}` : '/v1/allocations'
     return this.request<TrellisAllocation[]>('GET', path, {

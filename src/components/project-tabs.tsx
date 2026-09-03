@@ -8,7 +8,9 @@ const tabs = [
   { label: 'Services', href: '' },
   { label: 'Environments', href: '/environments' },
   { label: 'Routes', href: '/routes' },
+  { label: 'Secrets', href: '/secrets' },
   { label: 'Deployments', href: '/deployments' },
+  { label: 'Integrations', href: '/integrations' },
   { label: 'Settings', href: '/settings' },
 ]
 
