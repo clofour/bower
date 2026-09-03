@@ -2,10 +2,9 @@
 
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { randomUUID } from 'crypto'
 import { eq } from 'drizzle-orm'
 import { db } from '@/db'
-import { users, organizations, organization_members } from '@/db/schema'
+import { users, organizations, organizationMembers } from '@/db/schema'
 import {
   hashPassword,
   verifyPassword,
@@ -14,6 +13,14 @@ import {
   getSessionCookieConfig,
   SESSION_COOKIE_NAME,
 } from '@/lib/auth'
+
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 63) || 'org'
+}
 
 export async function loginAction(
   formData: FormData
@@ -43,7 +50,7 @@ export async function loginAction(
   }
 
   const user = userRows[0]
-  const passwordValid = await verifyPassword(password, user.password_hash)
+  const passwordValid = await verifyPassword(password, user.passwordHash)
 
   if (!passwordValid) {
     return { error: 'Invalid email or password.' }
@@ -92,38 +99,34 @@ export async function registerAction(
   }
 
   const passwordHash = await hashPassword(password)
-  const userId = randomUUID()
-  const now = new Date()
 
-  await db.insert(users).values({
-    id: userId,
-    email: normalizedEmail,
-    name: trimmedName,
-    password_hash: passwordHash,
-    totp_secret: null,
-    totp_enabled: false,
-    created_at: now,
-    updated_at: now,
-  })
+  const [newUser] = await db
+    .insert(users)
+    .values({
+      email: normalizedEmail,
+      name: trimmedName,
+      passwordHash,
+    })
+    .returning({ id: users.id })
 
-  const orgId = randomUUID()
+  const orgName = `${trimmedName}'s Organization`
+  const [newOrg] = await db
+    .insert(organizations)
+    .values({
+      name: orgName,
+      slug: slugify(orgName),
+      trellisApiUrl: '',
+      trellisApiToken: '',
+    })
+    .returning({ id: organizations.id })
 
-  await db.insert(organizations).values({
-    id: orgId,
-    name: `${trimmedName}'s Organization`,
-    created_at: now,
-    updated_at: now,
-  })
-
-  await db.insert(organization_members).values({
-    id: randomUUID(),
-    organization_id: orgId,
-    user_id: userId,
+  await db.insert(organizationMembers).values({
+    orgId: newOrg.id,
+    userId: newUser.id,
     role: 'owner',
-    created_at: now,
   })
 
-  const { token, expiresAt } = await createSession(userId)
+  const { token, expiresAt } = await createSession(newUser.id)
   const cookieStore = await cookies()
   cookieStore.set(getSessionCookieConfig(token, expiresAt))
 

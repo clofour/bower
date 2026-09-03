@@ -35,11 +35,9 @@ export async function createSession(
   )
 
   await db.insert(sessions).values({
-    id: randomUUID(),
-    user_id: userId,
+    userId,
     token,
-    expires_at: expiresAt,
-    created_at: now,
+    expiresAt,
   })
 
   return { token, expiresAt }
@@ -61,7 +59,7 @@ export async function validateSession(
   const sessionRow = sessionRows[0]
   const now = new Date()
 
-  if (new Date(sessionRow.expires_at) <= now) {
+  if (new Date(sessionRow.expiresAt) <= now) {
     await db.delete(sessions).where(eq(sessions.token, token))
     return null
   }
@@ -69,7 +67,7 @@ export async function validateSession(
   const userRows = await db
     .select()
     .from(users)
-    .where(eq(users.id, sessionRow.user_id))
+    .where(eq(users.id, sessionRow.userId))
     .limit(1)
 
   if (userRows.length === 0) {
@@ -83,17 +81,17 @@ export async function validateSession(
     id: userRow.id,
     email: userRow.email,
     name: userRow.name,
-    avatarUrl: null,
-    totpEnabled: userRow.totp_enabled,
-    createdAt: new Date(userRow.created_at),
+    avatarUrl: userRow.avatarUrl,
+    totpEnabled: userRow.totpEnabled,
+    createdAt: new Date(userRow.createdAt),
   }
 
   const session: Session = {
     id: sessionRow.id,
-    userId: sessionRow.user_id,
+    userId: sessionRow.userId,
     token: sessionRow.token,
-    expiresAt: new Date(sessionRow.expires_at),
-    createdAt: new Date(sessionRow.created_at),
+    expiresAt: new Date(sessionRow.expiresAt),
+    createdAt: new Date(sessionRow.createdAt),
   }
 
   return { user, session }
