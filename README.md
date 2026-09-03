@@ -15,37 +15,27 @@ Canopy is an opinionated deployment dashboard built on top of [Trellis](https://
 
 ## Requirements
 
-- Node.js 20+
-- PostgreSQL
 - A running Trellis cluster with a credential that has `cluster/write` access
+- Node.js 20+ (local development only)
 
-## Quick start — local
+## Quick start
 
-```bash
-cp .env.example .env.local
-# Fill in DATABASE_URL and NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
-npm install
-npm run db:migrate
-npm run dev
-```
+### On Trellis
 
-Open `http://localhost:3000`, create the first organization owner, then add the Trellis API URL and token under **Organization → Cluster**.
+The `trellis.yml` below includes a bundled Postgres container so you can get running without an external database. It's fine for a demo; for production, replace the `db` task group with a managed database and store the connection string as a secret.
 
-## Quick start — deploy on Trellis
-
-### 1. Create the namespace and secrets
+#### 1. Create the namespace and encryption key secret
 
 ```bash
 trellisctl namespaces create platform
 
-# Generate a stable 32-byte key (same value across all Canopy instances)
+# Generate a stable 32-byte key — must be identical across all Canopy instances
 openssl rand -hex 32
 
-trellisctl secrets set database-url   --namespace platform "postgres://canopy:canopy@db.internal:5432/canopy"
 trellisctl secrets set encryption-key --namespace platform "<key from above>"
 ```
 
-### 2. Apply `trellis.yml`
+#### 2. Apply `trellis.yml`
 
 ```yaml
 # trellis.yml
@@ -53,6 +43,29 @@ trellisctl secrets set encryption-key --namespace platform "<key from above>"
 name: canopy
 namespace: platform
 task_groups:
+  - name: db
+    count: 1
+    tasks:
+      - name: postgres
+        image: docker.io/library/postgres:16-alpine
+        networking:
+          mode: host
+          ports:
+            - port: 5432
+        resources:
+          cpu: 250
+          memory: 256MiB
+        env:
+          POSTGRES_USER: canopy
+          POSTGRES_PASSWORD: canopy
+          POSTGRES_DB: canopy
+        health_check:
+          type: script
+          command: ["pg_isready", "-U", "canopy"]
+          interval: 5s
+          timeout: 5s
+          threshold: 3
+
   - name: web
     count: 2
     update:
@@ -70,11 +83,9 @@ task_groups:
           memory: 512MiB
         env:
           NODE_ENV: production
+          DATABASE_URL: postgres://canopy:canopy@localhost:5432/canopy
           CANOPY_RECONCILE_INTERVAL: "5"
         secrets:
-          - name: database-url
-            target: env
-            env: DATABASE_URL
           - name: encryption-key
             target: env
             env: NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
@@ -91,20 +102,58 @@ task_groups:
 trellisctl jobs apply trellis.yml
 ```
 
-### 3. Run migrations
+#### 3. Run migrations
 
-Migrations are a manual step and must complete before the new container serves traffic:
+Migrations must complete before the Canopy container serves traffic:
 
 ```bash
 docker run --rm \
-  -e DATABASE_URL="postgres://canopy:canopy@db.internal:5432/canopy" \
+  -e DATABASE_URL="postgres://canopy:canopy@<node-ip>:5432/canopy" \
   ghcr.io/clofour/canopy:latest \
   node -e "require('./src/db/migrate')"
 ```
 
-### 4. Finish setup
+#### 4. Finish setup
 
-Open Canopy at the node address on port 3000, create the first organization owner, and add your Trellis API URL and token under **Organization → Cluster**.
+Open Canopy at `http://<node-ip>:3000`, create the first organization owner, and add your Trellis API URL and token under **Organization → Cluster**.
+
+### Local development
+
+#### 1. Start Postgres
+
+```yaml
+# docker-compose.yml
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: canopy
+      POSTGRES_PASSWORD: canopy
+      POSTGRES_DB: canopy
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+volumes:
+  db-data:
+```
+
+```bash
+docker compose up -d
+```
+
+#### 2. Configure and run
+
+```bash
+cp .env.example .env.local
+# Set NEXT_SERVER_ACTIONS_ENCRYPTION_KEY to the output of: openssl rand -hex 32
+# DATABASE_URL is already set to match the compose service above
+npm install
+npm run db:migrate
+npm run dev
+```
+
+Open `http://localhost:3000`, create the first organization owner, then add the Trellis API URL and token under **Organization → Cluster**.
 
 ## Commands
 
