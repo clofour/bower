@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 const PUBLIC_PATHS = ['/login', '/register']
-const SESSION_COOKIE_NAME = 'canopy_session'
+const SESSION_COOKIE_NAME = 'bower_session'
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl

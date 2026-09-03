@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Job builder — converts a Canopy service config into a Trellis JobSpec
+// Job builder — converts a Bower service config into a Trellis JobSpec
 // ---------------------------------------------------------------------------
 
 import type {
@@ -15,10 +15,10 @@ import type {
 } from '@/types/trellis'
 
 // ---------------------------------------------------------------------------
-// Canopy service configuration (the Canopy-level abstraction)
+// Bower service configuration (the Bower-level abstraction)
 // ---------------------------------------------------------------------------
 
-export interface CanopySidecar {
+export interface BowerSidecar {
   name: string
   image: string
   cpu: number // millicores
@@ -28,14 +28,14 @@ export interface CanopySidecar {
   command?: string
 }
 
-export interface CanopySecretBinding {
+export interface BowerSecretBinding {
   name: string
   target: 'env' | 'file'
   env?: string // env var name (when target = 'env')
   path?: string // mount path (when target = 'file')
 }
 
-export interface CanopyServiceConfig {
+export interface BowerServiceConfig {
   name: string
   serviceLabel?: string
   namespace: string
@@ -53,10 +53,10 @@ export interface CanopyServiceConfig {
   healthCheckThreshold?: number
   deploymentStrategy: 'rolling' | 'recreate' | 'blue_green' | 'canary'
   envVars: Record<string, string>
-  secrets: CanopySecretBinding[]
+  secrets: BowerSecretBinding[]
   labels: Record<string, string>
   command?: string
-  sidecars: CanopySidecar[]
+  sidecars: BowerSidecar[]
   volumes: TrellisVolume[]
   rawConfig?: TrellisJobSpec
 }
@@ -88,12 +88,12 @@ const WORKER_RESTART_WINDOW = 5 * NS_PER_MINUTE
 // ---------------------------------------------------------------------------
 
 /**
- * Convert a Canopy service configuration into a Trellis JobSpec that can be
+ * Convert a Bower service configuration into a Trellis JobSpec that can be
  * submitted to `POST /v1/jobs` (or `/v1/jobs/plan`).
  */
-export function buildJobSpec(config: CanopyServiceConfig): TrellisJobSpec {
+export function buildJobSpec(config: BowerServiceConfig): TrellisJobSpec {
   if (config.type === 'custom' && config.rawConfig) {
-    return { ...config.rawConfig, name: config.name, namespace: config.namespace, task_groups: config.rawConfig.task_groups.map((group) => ({ ...group, labels: { ...group.labels, 'canopy/managed': 'true', 'canopy/service': config.serviceLabel ?? config.name } })) }
+    return { ...config.rawConfig, name: config.name, namespace: config.namespace, task_groups: config.rawConfig.task_groups.map((group) => ({ ...group, labels: { ...group.labels, 'bower/managed': 'true', 'bower/service': config.serviceLabel ?? config.name } })) }
   }
   const primaryTask = buildPrimaryTask(config)
   const sidecarTasks = config.sidecars.map((s) => buildSidecarTask(s))
@@ -101,8 +101,8 @@ export function buildJobSpec(config: CanopyServiceConfig): TrellisJobSpec {
 
   const labels: Record<string, string> = {
     ...config.labels,
-    'canopy/managed': 'true',
-    'canopy/service': config.serviceLabel ?? config.name,
+    'bower/managed': 'true',
+    'bower/service': config.serviceLabel ?? config.name,
   }
 
   const taskGroup: TrellisTaskGroup = {
@@ -135,7 +135,7 @@ export function buildJobSpec(config: CanopyServiceConfig): TrellisJobSpec {
 // Task builders
 // ---------------------------------------------------------------------------
 
-function buildPrimaryTask(config: CanopyServiceConfig): TrellisTask {
+function buildPrimaryTask(config: BowerServiceConfig): TrellisTask {
   const task: TrellisTask = {
     name: config.name,
     image: config.image,
@@ -176,7 +176,7 @@ function buildPrimaryTask(config: CanopyServiceConfig): TrellisTask {
   return task
 }
 
-function buildSidecarTask(sidecar: CanopySidecar): TrellisTask {
+function buildSidecarTask(sidecar: BowerSidecar): TrellisTask {
   const task: TrellisTask = {
     name: sidecar.name,
     image: sidecar.image,
@@ -208,7 +208,7 @@ function buildSidecarTask(sidecar: CanopySidecar): TrellisTask {
 // Sub-builders
 // ---------------------------------------------------------------------------
 
-function buildSecretRef(binding: CanopySecretBinding): TrellisSecretRef {
+function buildSecretRef(binding: BowerSecretBinding): TrellisSecretRef {
   const ref: TrellisSecretRef = {
     name: binding.name,
     target: binding.target,
@@ -222,7 +222,7 @@ function buildSecretRef(binding: CanopySecretBinding): TrellisSecretRef {
   return ref
 }
 
-function buildNetworking(config: CanopyServiceConfig): TrellisNetworking | null {
+function buildNetworking(config: BowerServiceConfig): TrellisNetworking | null {
   if (config.type !== 'web') {
     return null
   }
@@ -238,7 +238,7 @@ function buildNetworking(config: CanopyServiceConfig): TrellisNetworking | null 
   return networking
 }
 
-function buildHealthCheck(config: CanopyServiceConfig): TrellisHealthCheck | null {
+function buildHealthCheck(config: BowerServiceConfig): TrellisHealthCheck | null {
   if (!config.healthCheckType) {
     return null
   }
@@ -271,7 +271,7 @@ function buildHealthCheck(config: CanopyServiceConfig): TrellisHealthCheck | nul
 }
 
 function buildRestartPolicy(
-  config: CanopyServiceConfig,
+  config: BowerServiceConfig,
 ): TrellisRestartPolicy | null {
   if (config.type === 'worker' || config.type === 'cron') {
     return {
@@ -283,7 +283,7 @@ function buildRestartPolicy(
 }
 
 function buildUpdateStrategy(
-  config: CanopyServiceConfig,
+  config: BowerServiceConfig,
 ): TrellisUpdateStrategy | null {
   switch (config.deploymentStrategy) {
     case 'rolling':
@@ -292,7 +292,7 @@ function buildUpdateStrategy(
       return { strategy: 'recreate' }
     case 'blue_green':
     case 'canary':
-      // blue-green and canary are orchestrated at the Canopy level;
+      // blue-green and canary are orchestrated at the Bower level;
       // the underlying Trellis job uses a rolling strategy.
       return { strategy: 'rolling', max_parallel: 1 }
     default:

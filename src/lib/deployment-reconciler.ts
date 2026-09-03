@@ -53,7 +53,7 @@ export async function reconcileProjectDeployments(projectId: string, orgId: stri
         const nextWeight = steps.find((step) => step > previousWeight)
         if (nextWeight) {
           const replicas = Math.max(1, Math.ceil(config.replicas * nextWeight / 100))
-          const { spec } = await createDeploymentSpec(deployment.serviceId, deployment.environmentId, jobName, { replicas, labels: { 'trellis/weight': String(nextWeight), 'canopy/canary': 'true' } })
+          const { spec } = await createDeploymentSpec(deployment.serviceId, deployment.environmentId, jobName, { replicas, labels: { 'trellis/weight': String(nextWeight), 'bower/canary': 'true' } })
           await client.applyJob(spec, env.trellisNamespace)
           await recordDeploymentEvent(deployment.id, 'canary_step', `Canary advanced to ${nextWeight}%.`, { weight: nextWeight, replicas })
           continue

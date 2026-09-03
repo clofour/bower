@@ -1,6 +1,6 @@
-# Canopy
+# Bower
 
-Canopy is an opinionated deployment dashboard built on top of [Trellis](https://github.com/clofour/trellis-experimental). It adds application-platform abstractions — projects, environments, services, deployments, routes, secrets, teams, and an audit trail — while leaving scheduling, placement, and container lifecycle entirely to Trellis.
+Bower is an opinionated deployment dashboard built on top of [Trellis](https://github.com/clofour/trellis-experimental). It adds application-platform abstractions — projects, environments, services, deployments, routes, secrets, teams, and an audit trail — while leaving scheduling, placement, and container lifecycle entirely to Trellis.
 
 ## Features
 
@@ -8,7 +8,7 @@ Canopy is an opinionated deployment dashboard built on top of [Trellis](https://
 - **Services** — Web, Worker, Cron, and Custom types mapped to Trellis jobs
 - **Deployments** — auditable history with plan diffs, canary step advancement, and automatic rollback on health failures
 - **Managed ingress** — per-namespace Caddy proxy; adding a route writes the config and reloads automatically
-- **Secrets** — backed by Trellis namespace secrets; Canopy tracks metadata and rotation without storing values
+- **Secrets** — backed by Trellis namespace secrets; Bower tracks metadata and rotation without storing values
 - **RBAC** — Owner, Admin, Deployer, and Viewer roles scoped per project
 - **Audit log** — every mutation recorded with actor, timestamp, and before/after state
 - **CI/CD hooks** — inbound deploy endpoint and registry webhooks with HMAC verification
@@ -27,7 +27,7 @@ The `trellis.yml` below includes a bundled Postgres container so you can get run
 #### 1. Set the encryption key secret
 
 ```bash
-# Generate a stable 32-byte key and store it — must be identical across all Canopy instances
+# Generate a stable 32-byte key and store it — must be identical across all Bower instances
 openssl rand -hex 32 | trellisctl --namespace platform secrets set encryption-key --stdin
 ```
 
@@ -36,7 +36,7 @@ openssl rand -hex 32 | trellisctl --namespace platform secrets set encryption-ke
 ```yaml
 # trellis.yml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/clofour/trellis-experimental/main/schemas/trellis-job.schema.json
-name: canopy
+name: bower
 namespace: platform
 task_groups:
   - name: db
@@ -52,15 +52,15 @@ task_groups:
           cpu: 250
           memory: 256MiB
         env:
-          POSTGRES_USER: canopy
-          POSTGRES_PASSWORD: canopy
-          POSTGRES_DB: canopy
+          POSTGRES_USER: bower
+          POSTGRES_PASSWORD: bower
+          POSTGRES_DB: bower
         volumes:
           - name: pgdata
             path: /var/lib/postgresql/data
         health_check:
           type: script
-          command: ["pg_isready", "-U", "canopy"]
+          command: ["pg_isready", "-U", "bower"]
           interval: 5s
           timeout: 5s
           threshold: 3
@@ -71,8 +71,8 @@ task_groups:
       strategy: rolling
       max_parallel: 1
     tasks:
-      - name: canopy
-        image: ghcr.io/clofour/canopy:latest
+      - name: bower
+        image: ghcr.io/clofour/bower:latest
         networking:
           mode: host
           ports:
@@ -82,8 +82,8 @@ task_groups:
           memory: 512MiB
         env:
           NODE_ENV: production
-          DATABASE_URL: postgres://canopy:canopy@localhost:5432/canopy
-          CANOPY_RECONCILE_INTERVAL: "5"
+          DATABASE_URL: postgres://bower:bower@localhost:5432/bower
+          BOWER_RECONCILE_INTERVAL: "5"
         secrets:
           - name: encryption-key
             target: env
@@ -109,14 +109,14 @@ The production container is a Next.js standalone build and does not include the 
 git clone https://github.com/clofour/trellis-dashboard.git
 cd trellis-dashboard
 npm install
-DATABASE_URL="postgres://canopy:canopy@<node-ip>:5432/canopy" npm run db:migrate
+DATABASE_URL="postgres://bower:bower@<node-ip>:5432/bower" npm run db:migrate
 ```
 
-The Canopy container will restart until migrations complete, then converge to healthy. Check progress with `trellisctl jobs status canopy`.
+The Bower container will restart until migrations complete, then converge to healthy. Check progress with `trellisctl jobs status bower`.
 
 #### 4. Finish setup
 
-Open Canopy at `http://<node-ip>:3000`, create the first organization owner, and add your Trellis API URL and token under **Organization → Cluster**.
+Open Bower at `http://<node-ip>:3000`, create the first organization owner, and add your Trellis API URL and token under **Organization → Cluster**.
 
 ### Local development
 
@@ -128,9 +128,9 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: canopy
-      POSTGRES_PASSWORD: canopy
-      POSTGRES_DB: canopy
+      POSTGRES_USER: bower
+      POSTGRES_PASSWORD: bower
+      POSTGRES_DB: bower
     ports:
       - "5432:5432"
     volumes:
@@ -170,7 +170,7 @@ npm run db:migrate   # Apply pending migrations
 
 ## Container image
 
-Tagged releases publish `ghcr.io/clofour/canopy:<version>` and update `ghcr.io/clofour/canopy:latest`. The container listens on port 3000 and runs as a non-root user.
+Tagged releases publish `ghcr.io/clofour/bower:<version>` and update `ghcr.io/clofour/bower:latest`. The container listens on port 3000 and runs as a non-root user.
 
 Migrations are not run automatically on startup — run `npm run db:migrate` (or the Docker equivalent) before starting the new container.
 

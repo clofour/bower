@@ -52,7 +52,7 @@ async function storeEnvironmentVariables(orgId: string, environment: { trellisNa
   const existing = environment.envVars as Record<string, string>
   const client = await getTrellisClient(orgId); const metadata: Record<string, string> = {}
   for (const [name, value] of Object.entries(submitted)) {
-    const secretName = `CANOPY_ENV_${name}`; metadata[name] = secretName
+    const secretName = `BOWER_ENV_${name}`; metadata[name] = secretName
     if (value) await client.setSecret(environment.trellisNamespace, secretName, value)
     else if (!existing[name]) throw new Error(`A value is required for new environment variable ${name}.`)
   }
@@ -92,7 +92,7 @@ export async function deleteEnvironmentAction(projectId: string, environmentId: 
   const [environment] = await db.select().from(environments).where(and(eq(environments.id, environmentId), eq(environments.projectId, projectId))).limit(1)
   if (!environment) return
   const client = await getTrellisClient(ctx.org.id)
-  await client.deleteJob('canopy-proxy', environment.trellisNamespace).catch(() => undefined)
+  await client.deleteJob('bower-proxy', environment.trellisNamespace).catch(() => undefined)
   const secrets = await client.listSecrets(environment.trellisNamespace).catch(() => [])
   await Promise.allSettled(secrets.map((secret) => client.deleteSecret(environment.trellisNamespace, secret.name)))
   await db.delete(environments).where(and(eq(environments.id, environmentId), eq(environments.projectId, projectId)))

@@ -20,9 +20,9 @@ jobs:
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Build and publish canopy
+      - name: Build and publish bower
         env:
-          IMAGE: ghcr.io/${{ github.repository_owner }}/canopy
+          IMAGE: ghcr.io/${{ github.repository_owner }}/bower
           VERSION: ${{ github.ref_name }}
         run: |
           docker build \
@@ -35,9 +35,9 @@ jobs:
           docker push "${IMAGE}:${VERSION}"
           docker push "${IMAGE}:latest"
 
-      - name: Build and publish canopy-proxy
+      - name: Build and publish bower-proxy
         env:
-          IMAGE: ghcr.io/${{ github.repository_owner }}/canopy-proxy
+          IMAGE: ghcr.io/${{ github.repository_owner }}/bower-proxy
           VERSION: ${{ github.ref_name }}
         run: |
           docker build \
@@ -51,9 +51,9 @@ jobs:
           docker push "${IMAGE}:${VERSION}"
           docker push "${IMAGE}:latest"
 
-      - name: Build and publish canopy-proxy-sync
+      - name: Build and publish bower-proxy-sync
         env:
-          IMAGE: ghcr.io/${{ github.repository_owner }}/canopy-proxy-sync
+          IMAGE: ghcr.io/${{ github.repository_owner }}/bower-proxy-sync
           VERSION: ${{ github.ref_name }}
         run: |
           docker build \

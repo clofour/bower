@@ -5,7 +5,7 @@
 Trigger a deployment from any CI system using an API key created under **Account → API keys**.
 
 ```bash
-curl -X POST https://canopy.example.com/api/deploy \
+curl -X POST https://bower.example.com/api/deploy \
   -H "Authorization: Bearer <api-key>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -15,15 +15,15 @@ curl -X POST https://canopy.example.com/api/deploy \
   }'
 ```
 
-`serviceId` and `environmentId` are UUIDs visible in the Canopy UI under each service and environment.
+`serviceId` and `environmentId` are UUIDs visible in the Bower UI under each service and environment.
 
 ## Registry webhooks
 
 Create an inbound endpoint under **Project → Integrations**. The endpoint token doubles as the HMAC-SHA256 signing secret.
 
-Canopy accepts the signature in either of these headers:
+Bower accepts the signature in either of these headers:
 
-- `X-Canopy-Signature`
+- `X-Bower-Signature`
 - `X-Hub-Signature-256` (GitHub-compatible format)
 
 Supported payload formats: Docker Hub, GHCR, and generic (any POST body containing an `image` field).

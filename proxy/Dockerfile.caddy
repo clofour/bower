@@ -2,7 +2,7 @@ FROM caddy:2-builder-alpine AS builder
 RUN xcaddy build --with github.com/mholt/caddy-ratelimit
 FROM caddy:2-alpine
 COPY --from=builder /usr/bin/caddy /usr/bin/caddy
-COPY caddy-entrypoint.sh /usr/bin/canopy-caddy
-RUN chmod 0755 /usr/bin/canopy-caddy
-ENTRYPOINT ["/usr/bin/canopy-caddy"]
+COPY caddy-entrypoint.sh /usr/bin/bower-caddy
+RUN chmod 0755 /usr/bin/bower-caddy
+ENTRYPOINT ["/usr/bin/bower-caddy"]
 CMD []

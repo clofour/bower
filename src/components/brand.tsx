@@ -7,6 +7,6 @@ export function Brand({ compact = false, inverse = false }: { compact?: boolean;
       inverse ? 'bg-white text-[hsl(224,45%,16%)]' : 'bg-primary text-primary-foreground')}>
       <Sprout className="h-4 w-4" strokeWidth={2.4} />
     </span>
-    {!compact && <span className={cn('text-[15px] font-black tracking-[-0.03em]', inverse && 'text-white')}>Canopy</span>}
+    {!compact && <span className={cn('text-[15px] font-black tracking-[-0.03em]', inverse && 'text-white')}>Bower</span>}
   </div>
 }

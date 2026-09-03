@@ -56,7 +56,7 @@ export default function RegisterPage() {
           </svg>
         </div>
         <span className="text-lg font-bold tracking-tight text-foreground">
-          Canopy
+          Bower
         </span>
       </div>
 

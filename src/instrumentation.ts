@@ -1,5 +1,5 @@
 declare global {
-  var canopyDeploymentMonitor: NodeJS.Timeout | undefined
+  var bowerDeploymentMonitor: NodeJS.Timeout | undefined
 }
 
 async function seedDefaultOrg() {
@@ -41,7 +41,7 @@ async function seedDefaultOrg() {
 
   const line = '═'.repeat(60)
   console.log(`\n╔${line}╗`)
-  console.log('║           Canopy — First Run Setup                         ║')
+  console.log('║           Bower — First Run Setup                         ║')
   console.log(`╠${line}╣`)
   console.log('║  Use this invite token to create the first account:        ║')
   console.log(`║  ${rawToken.padEnd(58)}║`)
@@ -51,16 +51,16 @@ async function seedDefaultOrg() {
 }
 
 export async function register() {
-  if (process.env.NEXT_RUNTIME !== 'nodejs' || globalThis.canopyDeploymentMonitor) return
+  if (process.env.NEXT_RUNTIME !== 'nodejs' || globalThis.bowerDeploymentMonitor) return
 
   await seedDefaultOrg().catch((err) =>
-    console.error('Canopy default org seeding failed:', err)
+    console.error('Bower default org seeding failed:', err)
   )
 
   const { reconcileAllDeployments } = await import('@/lib/deployment-reconciler')
-  const seconds = Math.max(2, Number(process.env.CANOPY_RECONCILE_INTERVAL || 5))
-  const reconcile = () => void reconcileAllDeployments().catch((error) => console.error('Canopy deployment reconciliation failed:', error))
+  const seconds = Math.max(2, Number(process.env.BOWER_RECONCILE_INTERVAL || 5))
+  const reconcile = () => void reconcileAllDeployments().catch((error) => console.error('Bower deployment reconciliation failed:', error))
   reconcile()
-  globalThis.canopyDeploymentMonitor = setInterval(reconcile, seconds * 1000)
-  globalThis.canopyDeploymentMonitor.unref()
+  globalThis.bowerDeploymentMonitor = setInterval(reconcile, seconds * 1000)
+  globalThis.bowerDeploymentMonitor.unref()
 }

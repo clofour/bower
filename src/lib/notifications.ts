@@ -8,9 +8,9 @@ export async function sendDeploymentNotifications(projectId: string, payload: Re
     const config = channel.config as { url?: string }
     if (!config.url) return
     const body = channel.type === 'slack'
-      ? { text: `Canopy deployment ${payload.status}: ${payload.service} → ${payload.environment} (${payload.image})`, attachments: [{ fields: Object.entries(payload).map(([title, value]) => ({ title, value: String(value), short: true })) }] }
+      ? { text: `Bower deployment ${payload.status}: ${payload.service} → ${payload.environment} (${payload.image})`, attachments: [{ fields: Object.entries(payload).map(([title, value]) => ({ title, value: String(value), short: true })) }] }
       : channel.type === 'discord'
-        ? { content: `Canopy deployment **${payload.status}**`, embeds: [{ fields: Object.entries(payload).map(([name, value]) => ({ name, value: String(value), inline: true })) }] }
+        ? { content: `Bower deployment **${payload.status}**`, embeds: [{ fields: Object.entries(payload).map(([name, value]) => ({ name, value: String(value), inline: true })) }] }
         : payload
     const response = await fetch(config.url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(10_000) })
     if (!response.ok) throw new Error(`Notification ${channel.name} returned ${response.status}.`)

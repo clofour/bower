@@ -115,7 +115,7 @@ export async function beginTotpAction() {
   const user = await getCurrentUser(); if (!user) return { error: 'Not authenticated.' }
   const secret = createTotpSecret()
   await db.update(users).set({ totpSecret: secret, totpEnabled: false, updatedAt: new Date() }).where(eq(users.id, user.id))
-  return { secret, uri: `otpauth://totp/Canopy:${encodeURIComponent(user.email)}?secret=${secret}&issuer=Canopy` }
+  return { secret, uri: `otpauth://totp/Bower:${encodeURIComponent(user.email)}?secret=${secret}&issuer=Bower` }
 }
 
 export async function confirmTotpAction(code: string) {
@@ -138,7 +138,7 @@ export async function createApiKeyAction(name: string) {
   const user = await getCurrentUser(); if (!user) return { error: 'Not authenticated.' }
   const ctx = await getUserOrganization(user.id); if (!ctx) return { error: 'No organization found.' }
   if (!name.trim()) return { error: 'Key name is required.' }
-  const token = `canopy_${randomBytes(24).toString('base64url')}`
+  const token = `bower_${randomBytes(24).toString('base64url')}`
   const [key] = await db.insert(apiKeys).values({ orgId: ctx.org.id, userId: user.id, name: name.trim(),
     keyHash: createHash('sha256').update(token).digest('hex'), keyPrefix: token.slice(0, 13) })
     .returning()

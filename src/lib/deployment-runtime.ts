@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { deploymentEvents, environments, projects, serviceConfigs, services, sidecars, users } from '@/db/schema'
-import { buildJobSpec, type CanopySecretBinding, type CanopySidecar } from '@/lib/job-builder'
+import { buildJobSpec, type BowerSecretBinding, type BowerSidecar } from '@/lib/job-builder'
 import { sendDeploymentNotifications } from '@/lib/notifications'
 import type { TrellisJobSpec, TrellisVolume } from '@/types/trellis'
 
@@ -23,9 +23,9 @@ export async function createDeploymentSpec(serviceId: string, environmentId: str
     healthCheckThreshold: row.config.healthCheckThreshold, deploymentStrategy: row.config.deploymentStrategy,
     envVars: row.config.envVars as Record<string, string>, labels: { ...(row.config.labels as Record<string, string>), ...overrides?.labels },
     command: row.config.command ?? undefined,
-    secrets: [...Object.entries(row.environment.envVars as Record<string, string>).map(([env, name]) => ({ name, target: 'env' as const, env })), ...(row.config.secretBindings as CanopySecretBinding[])],
+    secrets: [...Object.entries(row.environment.envVars as Record<string, string>).map(([env, name]) => ({ name, target: 'env' as const, env })), ...(row.config.secretBindings as BowerSecretBinding[])],
     volumes: row.config.volumes as TrellisVolume[],
-    sidecars: attached.map((item) => ({ name: item.name, image: item.image, cpu: item.cpu, memory: item.memory, port: item.port ?? undefined, envVars: item.envVars as Record<string, string>, command: item.command ?? undefined })) as CanopySidecar[],
+    sidecars: attached.map((item) => ({ name: item.name, image: item.image, cpu: item.cpu, memory: item.memory, port: item.port ?? undefined, envVars: item.envVars as Record<string, string>, command: item.command ?? undefined })) as BowerSidecar[],
     rawConfig: row.config.rawConfig as TrellisJobSpec | undefined,
   })
   return { ...row, spec }

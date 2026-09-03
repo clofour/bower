@@ -1,10 +1,10 @@
-# Canopy — Planning Document
+# Bower — Planning Document
 
-Canopy is an opinionated deployment platform built on top of Trellis. Where the builtin Trellis dashboard deliberately mirrors `trellisctl` and exposes raw Trellis primitives, Canopy adds application-platform abstractions that make common deployment patterns easy without requiring the operator to compose them manually.
+Bower is an opinionated deployment platform built on top of Trellis. Where the builtin Trellis dashboard deliberately mirrors `trellisctl` and exposes raw Trellis primitives, Bower adds application-platform abstractions that make common deployment patterns easy without requiring the operator to compose them manually.
 
-Canopy is a standalone Next.js web application with its own PostgreSQL database. It connects to one Trellis cluster using a `cluster/write` operator credential. All scheduling, reconciliation, and container lifecycle stays in Trellis. Canopy owns the platform layer: projects, environments, teams, deployment history, routing, and audit.
+Bower is a standalone Next.js web application with its own PostgreSQL database. It connects to one Trellis cluster using a `cluster/write` operator credential. All scheduling, reconciliation, and container lifecycle stays in Trellis. Bower owns the platform layer: projects, environments, teams, deployment history, routing, and audit.
 
-**Canopy does not:**
+**Bower does not:**
 - Build container images (handled by CI/CD or a separate platform)
 - Host a container registry
 - Provision nodes or set up clusters
@@ -16,12 +16,12 @@ Canopy is a standalone Next.js web application with its own PostgreSQL database.
 
 ```
                     +---------------------+
-                    |   Canopy Web UI     |
+                    |   Bower Web UI     |
                     |   (Next.js + React) |
                     +----------+----------+
                                |
                     +----------v----------+
-                    |  Canopy Backend     |
+                    |  Bower Backend     |
                     |  (Next.js API       |
                     |   routes + Postgres)|
                     +----------+----------+
@@ -34,7 +34,7 @@ Canopy is a standalone Next.js web application with its own PostgreSQL database.
 
 ## Visual Style
 
-Clean, modern, confident. Generous whitespace, split layouts where appropriate, bold typography. Canopy's own color identity (not copying the Trellis dashboard or any reference). Cool-toned palette. The UI should feel opinionated and polished — not a generic admin panel.
+Clean, modern, confident. Generous whitespace, split layouts where appropriate, bold typography. Bower's own color identity (not copying the Trellis dashboard or any reference). Cool-toned palette. The UI should feel opinionated and polished — not a generic admin panel.
 
 ## 1. Projects
 
@@ -70,7 +70,7 @@ Each project has one or more environments. Environments are ordered for promotio
 
 ## 3. Services
 
-A service is Canopy's primary abstraction over Trellis jobs.
+A service is Bower's primary abstraction over Trellis jobs.
 
 ### Service types
 
@@ -78,7 +78,7 @@ A service is Canopy's primary abstraction over Trellis jobs.
 | ---------- | -------------------------------------------------------------------- | ----------------------------------------------- |
 | **Web**    | Host-networked job with HTTP health, rolling updates, route-eligible | Port 8080, `/health`, rolling, 2 replicas       |
 | **Worker** | No networking, restart policy, no health check or script-based       | Restart 3/5m, 1 replica                         |
-| **Cron**   | Periodic execution (needs Trellis support; Canopy manages start/stop as noop until then) | Schedule expression               |
+| **Cron**   | Periodic execution (needs Trellis support; Bower manages start/stop as noop until then) | Schedule expression               |
 | **Custom** | Full control over task groups, networking, etc. (escape hatch)       | None — user provides raw config                 |
 
 ### Service configuration (common fields)
@@ -98,7 +98,7 @@ A service is Canopy's primary abstraction over Trellis jobs.
 
 ### How it maps to Trellis
 
-Canopy generates a complete `JobSpec` from the service configuration. The job name follows the pattern `{service-slug}` within the environment's namespace. When the user edits a service or triggers a deployment, Canopy:
+Bower generates a complete `JobSpec` from the service configuration. The job name follows the pattern `{service-slug}` within the environment's namespace. When the user edits a service or triggers a deployment, Bower:
 
 1. Generates the new `JobSpec`
 2. Calls `POST /v1/jobs/plan` for the semantic diff
@@ -123,16 +123,16 @@ A service can have attached sidecars — additional containers in the same task 
 
 **How it works:**
 
-Canopy deploys and manages a reverse proxy job per namespace (one Caddy instance per environment). This proxy job:
+Bower deploys and manages a reverse proxy job per namespace (one Caddy instance per environment). This proxy job:
 - Uses `api_access: namespace/read` to discover healthy allocations via labels
 - Runs a sync agent to watch allocation endpoints
 - Renders upstream config and reloads the proxy
 - Binds to a configurable host port (e.g., 80/443)
 
-When a route is added/changed, Canopy updates the proxy configuration and triggers a config reload. The proxy job itself is a Canopy-managed Trellis job that users don't directly interact with — it appears in the UI as infrastructure rather than a user service.
+When a route is added/changed, Bower updates the proxy configuration and triggers a config reload. The proxy job itself is a Bower-managed Trellis job that users don't directly interact with — it appears in the UI as infrastructure rather than a user service.
 
 **DNS:**
-Canopy tells the user what DNS record to create (e.g., "Point `api.example.com` CNAME to `node-1.cluster.example.com`"). It does not manage DNS.
+Bower tells the user what DNS record to create (e.g., "Point `api.example.com` CNAME to `node-1.cluster.example.com`"). It does not manage DNS.
 
 ## 5. Deployments
 
@@ -148,18 +148,18 @@ A deployment is an auditable event representing a change to a service in an envi
 - Trellis revision number
 - Plan diff (stored)
 
-### Deployment strategies implemented by Canopy
+### Deployment strategies implemented by Bower
 
 | Strategy      | Implementation                                                                                                                                                 |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Rolling**   | Uses Trellis's native `rolling` update strategy. Canopy watches allocation health during rollout.                                                              |
+| **Rolling**   | Uses Trellis's native `rolling` update strategy. Bower watches allocation health during rollout.                                                              |
 | **Recreate**  | Uses Trellis's native `recreate`.                                                                                                                              |
-| **Blue-green** | Canopy creates a second job (`{service}-green`), waits for it to be healthy, switches the route, then deletes the old job. Full atomic traffic switch.        |
-| **Canary**    | Canopy creates a canary job (`{service}-canary`) with low replica count and a `trellis/weight` label. Gradually increases weight/replicas over configurable steps. Automatic rollback if health degrades. |
+| **Blue-green** | Bower creates a second job (`{service}-green`), waits for it to be healthy, switches the route, then deletes the old job. Full atomic traffic switch.        |
+| **Canary**    | Bower creates a canary job (`{service}-canary`) with low replica count and a `trellis/weight` label. Gradually increases weight/replicas over configurable steps. Automatic rollback if health degrades. |
 
 ### Automatic rollback
 
-If allocations remain unhealthy for longer than a configurable threshold (default: 5 minutes), Canopy re-applies the previous known-good spec. Recorded as a `rolled-back` deployment.
+If allocations remain unhealthy for longer than a configurable threshold (default: 5 minutes), Bower re-applies the previous known-good spec. Recorded as a `rolled-back` deployment.
 
 ### Promotion
 
@@ -174,23 +174,23 @@ Deploying a service to a higher environment takes the exact image and config fro
 - Secret references in service config link to these
 
 **Under the hood:**
-All secrets are stored in Trellis via its namespace-scoped secrets API. Canopy adds metadata in Postgres (which services reference which secrets, shared-secret groupings, rotation timestamps) but never stores secret values itself.
+All secrets are stored in Trellis via its namespace-scoped secrets API. Bower adds metadata in Postgres (which services reference which secrets, shared-secret groupings, rotation timestamps) but never stores secret values itself.
 
 ## 7. Operational Actions
 
 | Action                    | Implementation                                                                                                          | Trellis support |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------- |
-| **Restart service**       | Needs Trellis `restart` endpoint. Workaround: bump a `CANOPY_RESTART_EPOCH` env var to force a new execution hash.      | Noop            |
+| **Restart service**       | Needs Trellis `restart` endpoint. Workaround: bump a `BOWER_RESTART_EPOCH` env var to force a new execution hash.      | Noop            |
 | **Scale service**         | Re-submits the `JobSpec` with new `count`. If Trellis adds a scale endpoint, use that.                                  | Workaround      |
 | **Rollback**              | Re-applies a previous deployment's stored `JobSpec`. If Trellis adds revision history, can also use that.               | Workaround      |
-| **Pause / resume**        | Sets `count: 0`. Canopy remembers the original count for resume.                                                        | Workaround      |
+| **Pause / resume**        | Sets `count: 0`. Bower remembers the original count for resume.                                                        | Workaround      |
 | **View logs**             | Proxies `GET /v1/allocations/{id}/logs` per task. UI shows logs per service with allocation selector.                   | Supported       |
 | **View events**           | Proxies `GET /v1/allocations/{id}/events`. Shows lifecycle timeline per allocation.                                     | Supported       |
 | **Exec into container**   | Needs Trellis `exec` endpoint.                                                                                          | Noop            |
 | **Diagnose**              | Calls job status and surfaces unhealthy/failed allocations with reason/message. Equivalent to `trellisctl jobs diagnose`. | Supported      |
 | **Stop individual alloc** | Needs Trellis allocation stop endpoint.                                                                                 | Noop            |
 
-"Noop" means the UI element exists but shows a "not yet available" state or toast. "Workaround" means Canopy implements it using existing Trellis API surface.
+"Noop" means the UI element exists but shows a "not yet available" state or toast. "Workaround" means Bower implements it using existing Trellis API surface.
 
 ## 8. Authentication & Authorization
 
@@ -264,7 +264,7 @@ Templates are starting points — all fields are editable after creation. Organi
 
 ## 12. Trellis API Additions Needed
 
-Features that Canopy implements as noop until Trellis adds support:
+Features that Bower implements as noop until Trellis adds support:
 
 ### Required (workarounds exist but are hacky)
 1. **Restart endpoint** — `POST /v1/jobs/{name}/restart`
@@ -312,13 +312,13 @@ Features that Canopy implements as noop until Trellis adds support:
 
 | Concern                              | Owner                                        |
 | ------------------------------------ | -------------------------------------------- |
-| Project/team/environment metadata    | Canopy                                       |
-| Service to job manifest translation  | Canopy                                       |
-| Route/proxy lifecycle                | Canopy (manages Trellis proxy jobs)          |
-| Deployment history & audit           | Canopy                                       |
-| Access control & teams               | Canopy                                       |
+| Project/team/environment metadata    | Bower                                       |
+| Service to job manifest translation  | Bower                                       |
+| Route/proxy lifecycle                | Bower (manages Trellis proxy jobs)          |
+| Deployment history & audit           | Bower                                       |
+| Access control & teams               | Bower                                       |
 | Scheduling, placement, reconciliation | Trellis                                     |
 | Allocation lifecycle & health        | Trellis                                      |
 | Secrets encryption & delivery        | Trellis                                      |
 | Namespace networking & discovery     | Trellis                                      |
-| Node management & draining           | Trellis (exposed read-only + drain in Canopy) |
+| Node management & draining           | Trellis (exposed read-only + drain in Bower) |
