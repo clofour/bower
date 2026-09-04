@@ -53,6 +53,11 @@ async function seedDefaultOrg() {
 export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs' || globalThis.bowerDeploymentMonitor) return
 
+  if (process.env.AUTO_MIGRATE === 'true') {
+    const { runMigrations } = await import('@/db/migrate')
+    await runMigrations()
+  }
+
   await seedDefaultOrg().catch((err) =>
     console.error('Bower default org seeding failed:', err)
   )
