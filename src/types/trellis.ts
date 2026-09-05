@@ -254,3 +254,48 @@ export interface TrellisApplyJobResponse {
   created: boolean
   revision?: number
 }
+
+// -- Job revisions ----------------------------------------------------------
+
+export interface TrellisJobRevision {
+  revision: number
+  spec: TrellisJobSpec
+  created_at: string // ISO 8601
+}
+
+// -- Allocation metrics -----------------------------------------------------
+
+export interface TrellisAllocationMetrics {
+  allocation_id: string
+  task: string
+  cpu_usage_nanoseconds: number
+  memory_usage_bytes: number
+  collected_at: string // ISO 8601
+}
+
+// -- Exec -------------------------------------------------------------------
+
+export interface TrellisExecResponse {
+  stdout: string
+  stderr: string
+  exit_code: number
+}
+
+// -- Cluster events (SSE) ---------------------------------------------------
+
+export type TrellisClusterEventType =
+  | 'allocation.phase_changed'
+  | 'allocation.health_changed'
+  | 'job.registered'
+  | 'job.deleted'
+
+export interface TrellisClusterEvent {
+  type: TrellisClusterEventType
+  namespace?: string
+  job?: string
+  allocation_id?: string
+  phase?: string
+  health?: string
+  revision?: number
+  at: string // ISO 8601
+}
