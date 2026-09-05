@@ -84,6 +84,7 @@ task_groups:
           NODE_ENV: production
           DATABASE_URL: postgres://bower:bower@localhost:5432/bower
           BOWER_RECONCILE_INTERVAL: "5"
+          AUTO_MIGRATE: "true"
         secrets:
           - name: encryption-key
             target: env
@@ -101,9 +102,11 @@ task_groups:
 trellisctl jobs apply --file trellis.yml
 ```
 
-#### 3. Run migrations
+#### 3. Migrations
 
-The production container is a Next.js standalone build and does not include the migration script. Run migrations from a local clone once the `db` allocation is healthy:
+With `AUTO_MIGRATE=true` (set in the manifest above), the container applies pending migrations on startup before the app begins serving traffic. No manual step is needed.
+
+To run migrations manually instead, unset `AUTO_MIGRATE` and run from a local clone once the `db` allocation is healthy:
 
 ```bash
 git clone https://github.com/clofour/trellis-dashboard.git
@@ -112,7 +115,7 @@ npm install
 DATABASE_URL="postgres://bower:bower@<node-ip>:5432/bower" npm run db:migrate
 ```
 
-The Bower container will restart until migrations complete, then converge to healthy. Check progress with `trellisctl jobs status bower`.
+Check progress with `trellisctl jobs status bower`.
 
 #### 4. Finish setup
 
@@ -172,7 +175,7 @@ npm run db:migrate   # Apply pending migrations
 
 Tagged releases publish `ghcr.io/clofour/bower:<version>` and update `ghcr.io/clofour/bower:latest`. The container listens on port 3000 and runs as a non-root user.
 
-Migrations are not run automatically on startup — run `npm run db:migrate` (or the Docker equivalent) before starting the new container.
+When `AUTO_MIGRATE=true` is set, the container applies pending migrations on startup. Otherwise, run `npm run db:migrate` before starting the new container.
 
 ## Further reading
 
