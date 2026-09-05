@@ -22,6 +22,7 @@ RUN addgroup --system --gid 1001 bower && adduser --system --uid 1001 --ingroup 
 COPY --from=builder --chown=bower:bower /app/public ./public
 COPY --from=builder --chown=bower:bower /app/.next/standalone ./
 COPY --from=builder --chown=bower:bower /app/.next/static ./.next/static
+COPY --from=builder --chown=bower:bower /app/drizzle ./drizzle
 
 USER bower
 EXPOSE 3000
