@@ -1,72 +1,72 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Activity,
   FolderKanban,
   LayoutDashboard,
+  Menu,
   Server,
-  Building2,
+  Settings,
   User,
-  LogOut,
-  PanelLeftClose,
-  PanelLeft,
-  X,
   Users,
-  ScrollText,
-  Blocks,
+  X,
 } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { logoutAction } from "@/lib/auth-actions";
-import { Brand } from '@/components/brand'
+import { Brand } from "@/components/brand";
 
-interface NavItem {
-  label: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-const mainNav: NavItem[] = [
+const nav = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "Projects", href: "/projects", icon: FolderKanban },
   { label: "Cluster", href: "/cluster", icon: Server },
-];
+] as const;
 
-const settingsNav: NavItem[] = [
-  { label: "Organization", href: "/settings/organization", icon: Building2 },
+const settingsNav = [
+  { label: "Organization", href: "/settings/organization", icon: Activity },
   { label: "Teams", href: "/settings/teams", icon: Users },
-  { label: "Templates", href: "/settings/templates", icon: Blocks },
-  { label: "Audit log", href: "/settings/audit", icon: ScrollText },
+  { label: "Templates", href: "/settings/templates", icon: Settings },
+  { label: "Audit log", href: "/settings/audit", icon: Settings },
   { label: "Account", href: "/settings/account", icon: User },
-];
+] as const;
 
-interface SidebarProps {
-  userName: string;
-  userEmail: string;
+function NavLink({
+  href,
+  icon: Icon,
+  label,
+  active,
+}: {
+  href: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        active
+          ? "bg-primary/10 text-primary"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      {label}
+    </Link>
+  );
 }
 
-export function Sidebar({ userName, userEmail }: SidebarProps) {
+export function Sidebar({
+  userName,
+  userEmail,
+}: {
+  userName: string;
+  userEmail: string;
+}) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  // Close mobile overlay on Escape
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === "Escape") setMobileOpen(false);
-  }, []);
-
-  useEffect(() => {
-    if (mobileOpen) {
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [mobileOpen, handleKeyDown]);
-
-  function isActive(href: string) {
-    return pathname === href || pathname.startsWith(href + "/");
-  }
+  const [open, setOpen] = useState(false);
 
   const initials = userName
     .split(" ")
@@ -75,195 +75,84 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
     .toUpperCase()
     .slice(0, 2);
 
-  // --- Shared sidebar content ---
-  function renderSidebarContent(mobile = false) {
-    const isCollapsed = !mobile && collapsed;
+  const content = (
+    <>
+      <div className="p-5">
+        <Brand />
+      </div>
 
-    return (
-      <div className="flex h-full flex-col">
-        {/* Brand */}
-        <div
-          className={cn(
-            "flex h-14 shrink-0 items-center gap-2.5 border-b border-sidebar-border px-4",
-            isCollapsed && "justify-center px-0"
-          )}
-        >
-          <Brand compact={isCollapsed} />
+      <nav className="flex-1 space-y-1 px-3">
+        {nav.map((item) => (
+          <NavLink
+            key={item.href}
+            {...item}
+            active={
+              item.href === "/dashboard"
+                ? pathname === "/dashboard"
+                : pathname.startsWith(item.href)
+            }
+          />
+        ))}
 
-          {/* Mobile close */}
-          {mobile && (
-            <button
-              onClick={() => setMobileOpen(false)}
-              className="ml-auto rounded-md p-1 text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          )}
+        <div className="pb-1 pt-5">
+          <p className="px-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+            Settings
+          </p>
         </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <NavSection
-            label="Main"
-            items={mainNav}
-            isCollapsed={isCollapsed}
-            isActive={isActive}
+        {settingsNav.map((item) => (
+          <NavLink
+            key={item.href}
+            {...item}
+            active={pathname.startsWith(item.href)}
           />
-          <div className="my-3" />
-          <NavSection
-            label="Settings"
-            items={settingsNav}
-            isCollapsed={isCollapsed}
-            isActive={isActive}
-          />
-        </nav>
+        ))}
+      </nav>
 
-        {/* Footer: user info + collapse toggle */}
-        <div className="shrink-0 border-t border-sidebar-border">
-          {/* User row */}
-          <div
-            className={cn(
-              "flex items-center gap-3 px-4 py-3",
-              isCollapsed && "justify-center px-0"
-            )}
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-              {initials}
-            </div>
-            {!isCollapsed && (
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium leading-tight text-sidebar-foreground">
-                  {userName}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {userEmail}
-                </p>
-              </div>
-            )}
-            {!isCollapsed && (
-              <form action={logoutAction}>
-                <button
-                  type="submit"
-                  title="Sign out"
-                  className="rounded-md p-1.5 text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
-              </form>
-            )}
+      <div className="border-t p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+            {initials}
           </div>
-
-          {/* Collapse toggle -- desktop only */}
-          {!mobile && (
-            <div className="flex items-center justify-center border-t border-sidebar-border py-2">
-              <button
-                onClick={() => setCollapsed((c) => !c)}
-                className="rounded-md p-1.5 text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
-                title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              >
-                {collapsed ? (
-                  <PanelLeft className="h-4 w-4" />
-                ) : (
-                  <PanelLeftClose className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-          )}
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">{userName}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {userEmail}
+            </p>
+          </div>
         </div>
       </div>
-    );
-  }
+    </>
+  );
 
   return (
     <>
-      {/* Mobile hamburger trigger */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed left-3 top-3 z-40 md:hidden"
-        onClick={() => setMobileOpen(true)}
-        aria-label="Open navigation"
+      {/* Mobile toggle */}
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="fixed left-4 top-3.5 z-50 flex h-8 w-8 items-center justify-center rounded-lg border bg-background text-foreground shadow-sm md:hidden"
+        aria-label={open ? "Close navigation" : "Open navigation"}
       >
-        <PanelLeft className="h-5 w-5" />
-      </Button>
+        {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+      </button>
 
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
-            onClick={() => setMobileOpen(false)}
-          />
-          <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-sidebar-background md:hidden">
-            {renderSidebarContent(true)}
-          </aside>
-        </>
+      {/* Backdrop */}
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm md:hidden"
+          onClick={() => setOpen(false)}
+        />
       )}
 
-      {/* Desktop sidebar */}
+      {/* Sidebar panel */}
       <aside
         className={cn(
-          "hidden shrink-0 border-r border-sidebar-border bg-sidebar-background transition-[width] duration-200 ease-in-out md:flex md:flex-col",
-          collapsed ? "w-[60px]" : "w-60"
+          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r bg-card transition-transform duration-300 md:relative md:translate-x-0",
+          open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        {renderSidebarContent()}
+        {content}
       </aside>
     </>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Nav section                                                        */
-/* ------------------------------------------------------------------ */
-
-function NavSection({
-  label,
-  items,
-  isCollapsed,
-  isActive,
-}: {
-  label: string;
-  items: NavItem[];
-  isCollapsed: boolean;
-  isActive: (href: string) => boolean;
-}) {
-  return (
-    <div>
-      {!isCollapsed && (
-        <p className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-          {label}
-        </p>
-      )}
-      <ul className="space-y-0.5">
-        {items.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item.href);
-          return (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                title={isCollapsed ? item.label : undefined}
-                className={cn(
-                  "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
-                  isCollapsed && "justify-center px-0",
-                  active
-                    ? "bg-sidebar-accent text-primary"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                )}
-              >
-                <Icon
-                  className={cn(
-                    "h-4 w-4 shrink-0",
-                    active ? "text-primary" : "text-muted-foreground"
-                  )}
-                />
-                {!isCollapsed && <span>{item.label}</span>}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
   );
 }

@@ -1,49 +1,47 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { cn } from '@/lib/utils'
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 const tabs = [
-  { label: 'Services', href: '' },
-  { label: 'Environments', href: '/environments' },
-  { label: 'Routes', href: '/routes' },
-  { label: 'Secrets', href: '/secrets' },
-  { label: 'Deployments', href: '/deployments' },
-  { label: 'Integrations', href: '/integrations' },
-  { label: 'Settings', href: '/settings' },
-]
+  { label: "Services", segment: "" },
+  { label: "Environments", segment: "/environments" },
+  { label: "Deployments", segment: "/deployments" },
+  { label: "Secrets", segment: "/secrets" },
+  { label: "Routes", segment: "/routes" },
+  { label: "Integrations", segment: "/integrations" },
+  { label: "Settings", segment: "/settings" },
+] as const;
 
 export function ProjectTabs({ slug }: { slug: string }) {
-  const pathname = usePathname()
-  const base = `/projects/${slug}`
+  const pathname = usePathname();
+  const base = `/projects/${slug}`;
 
   return (
-    <div className="border-b border-border">
-      <nav className="-mb-px flex gap-6" aria-label="Project tabs">
-        {tabs.map((tab) => {
-          const href = `${base}${tab.href}`
-          const isActive =
-            tab.href === ''
-              ? pathname === base || pathname === `${base}/`
-              : pathname.startsWith(href)
+    <nav className="flex gap-1 overflow-x-auto rounded-xl border bg-muted/40 p-1.5">
+      {tabs.map(({ label, segment }) => {
+        const href = `${base}${segment}`;
+        const active =
+          segment === ""
+            ? pathname === base || pathname === `${base}/`
+            : pathname.startsWith(href);
 
-          return (
-            <Link
-              key={tab.label}
-              href={href}
-              className={cn(
-                'border-b-[1.5px] pb-3 pt-1 text-sm font-medium transition-colors',
-                isActive
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
-              )}
-            >
-              {tab.label}
-            </Link>
-          )
-        })}
-      </nav>
-    </div>
-  )
+        return (
+          <Link
+            key={segment}
+            href={href}
+            className={cn(
+              "rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors",
+              active
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
 }

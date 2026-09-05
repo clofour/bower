@@ -1,15 +1,23 @@
-'use client'
+"use client";
 
-import type { ReactNode } from 'react'
-import { Button } from '@/components/ui/button'
-import { useToast } from '@/hooks/use-toast'
+import { Button } from "@/components/ui/button";
+import type { ComponentPropsWithoutRef } from "react";
 
-export function NoopButton({ children, feature, variant = 'outline', className }: {
-  children: ReactNode; feature: string; variant?: 'outline' | 'ghost' | 'secondary' | 'destructive'; className?: string
-}) {
-  const { toast } = useToast()
-  return <Button type="button" variant={variant} className={className} onClick={() => toast({
-    title: `${feature} is not available yet`,
-    description: 'The control is ready, but Trellis does not expose the required API yet.',
-  })}>{children}</Button>
+export function NoopButton({
+  feature,
+  children,
+  ...props
+}: ComponentPropsWithoutRef<typeof Button> & { feature: string }) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      {...props}
+      onClick={() =>
+        alert(`${feature} is not yet available in this version of Bower.`)
+      }
+    >
+      {children}
+    </Button>
+  );
 }

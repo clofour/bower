@@ -1,22 +1,27 @@
-import { redirect } from 'next/navigation'
-import { getCurrentUser } from '@/lib/auth'
-import { AccountSettingsForm } from '@/components/account-settings-form'
-import { getApiKeys } from '@/lib/queries'
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
+import { getApiKeys } from "@/lib/queries";
+import { PageHeading } from "@/components/page-heading";
+import { AccountSettingsForm } from "@/components/account-settings-form";
 
 export default async function AccountSettingsPage() {
-  const user = await getCurrentUser()
-  if (!user) redirect('/login')
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
 
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">Account</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Manage your profile and security settings
-        </p>
-      </div>
+      <PageHeading
+        eyebrow="Settings"
+        title="Account"
+        description="Manage your profile and security settings."
+      />
 
-      <AccountSettingsForm userName={user.name} userEmail={user.email} totpEnabled={user.totpEnabled} apiKeys={await getApiKeys(user.id)} />
+      <AccountSettingsForm
+        userName={user.name}
+        userEmail={user.email}
+        totpEnabled={user.totpEnabled}
+        apiKeys={await getApiKeys(user.id)}
+      />
     </div>
-  )
+  );
 }
