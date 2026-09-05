@@ -2,107 +2,107 @@
 
 /*
  * Bower Design System
- * Cool-toned palette: slate/zinc grays with teal/cyan accent
- * Tailwind CSS v4 — all tokens via @theme
+ * Emotional direction: Infrastructure serenity
+ * Cool-tinted neutrals, muted teal accent, deliberate spacing
  */
 
 /* -------------------------------------------------- */
 /* Light mode (default)                               */
 /* -------------------------------------------------- */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 215 25% 10%;
+  --background: 210 15% 98.5%;
+  --foreground: 222 18% 14%;
 
   --card: 0 0% 100%;
-  --card-foreground: 215 25% 10%;
+  --card-foreground: 222 18% 14%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 215 25% 10%;
+  --popover-foreground: 222 18% 14%;
 
-  --primary: 174 62% 32%;
+  --primary: 170 35% 36%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 210 18% 95%;
-  --secondary-foreground: 215 25% 15%;
+  --secondary: 214 12% 94%;
+  --secondary-foreground: 222 14% 22%;
 
-  --muted: 210 18% 96%;
-  --muted-foreground: 215 14% 46%;
+  --muted: 214 12% 95%;
+  --muted-foreground: 220 8% 50%;
 
-  --accent: 210 18% 95%;
-  --accent-foreground: 215 25% 15%;
+  --accent: 214 12% 94%;
+  --accent-foreground: 222 14% 22%;
 
-  --destructive: 0 72% 51%;
+  --destructive: 0 65% 50%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 214 18% 91%;
-  --input: 214 18% 91%;
-  --ring: 174 62% 32%;
+  --border: 220 10% 91%;
+  --input: 220 10% 89%;
+  --ring: 170 35% 36%;
 
-  --sidebar-background: 210 20% 98%;
-  --sidebar-foreground: 215 25% 10%;
-  --sidebar-primary: 174 62% 32%;
+  --sidebar-background: 214 12% 97.5%;
+  --sidebar-foreground: 222 18% 14%;
+  --sidebar-primary: 170 35% 36%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 210 18% 95%;
-  --sidebar-accent-foreground: 215 25% 15%;
-  --sidebar-border: 214 18% 91%;
-  --sidebar-ring: 174 62% 32%;
+  --sidebar-accent: 214 10% 93%;
+  --sidebar-accent-foreground: 222 14% 22%;
+  --sidebar-border: 220 10% 92%;
+  --sidebar-ring: 170 35% 36%;
 
-  --chart-1: 174 62% 32%;
-  --chart-2: 187 60% 42%;
-  --chart-3: 199 55% 48%;
-  --chart-4: 162 60% 40%;
-  --chart-5: 152 55% 50%;
+  --chart-1: 170 35% 36%;
+  --chart-2: 186 38% 42%;
+  --chart-3: 200 35% 48%;
+  --chart-4: 156 35% 40%;
+  --chart-5: 146 32% 48%;
 
-  --radius: 0.625rem;
+  --radius: 0.5rem;
 }
 
 /* -------------------------------------------------- */
-/* Dark mode: prefers-color-scheme (system default)   */
+/* Dark mode: prefers-color-scheme                    */
 /* -------------------------------------------------- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --background: 222 22% 8%;
-    --foreground: 210 20% 96%;
+    --background: 224 18% 9%;
+    --foreground: 210 15% 94%;
 
-    --card: 222 20% 11%;
-    --card-foreground: 210 20% 96%;
+    --card: 224 16% 12%;
+    --card-foreground: 210 15% 94%;
 
-    --popover: 222 20% 11%;
-    --popover-foreground: 210 20% 96%;
+    --popover: 224 16% 12%;
+    --popover-foreground: 210 15% 94%;
 
-    --primary: 172 55% 42%;
-    --primary-foreground: 222 22% 8%;
+    --primary: 170 30% 42%;
+    --primary-foreground: 224 18% 9%;
 
-    --secondary: 217 16% 16%;
-    --secondary-foreground: 210 20% 90%;
+    --secondary: 222 12% 15%;
+    --secondary-foreground: 210 12% 86%;
 
-    --muted: 217 16% 16%;
-    --muted-foreground: 215 14% 56%;
+    --muted: 222 12% 15%;
+    --muted-foreground: 220 8% 54%;
 
-    --accent: 217 16% 16%;
-    --accent-foreground: 210 20% 90%;
+    --accent: 222 12% 15%;
+    --accent-foreground: 210 12% 86%;
 
-    --destructive: 0 62% 50%;
+    --destructive: 0 58% 52%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 217 14% 18%;
-    --input: 217 14% 18%;
-    --ring: 172 55% 42%;
+    --border: 222 10% 17%;
+    --input: 222 10% 17%;
+    --ring: 170 30% 42%;
 
-    --sidebar-background: 222 22% 6%;
-    --sidebar-foreground: 210 20% 96%;
-    --sidebar-primary: 172 55% 42%;
-    --sidebar-primary-foreground: 222 22% 8%;
-    --sidebar-accent: 217 16% 16%;
-    --sidebar-accent-foreground: 210 20% 90%;
-    --sidebar-border: 217 14% 18%;
-    --sidebar-ring: 172 55% 42%;
+    --sidebar-background: 224 18% 7%;
+    --sidebar-foreground: 210 15% 94%;
+    --sidebar-primary: 170 30% 42%;
+    --sidebar-primary-foreground: 224 18% 9%;
+    --sidebar-accent: 222 12% 15%;
+    --sidebar-accent-foreground: 210 12% 86%;
+    --sidebar-border: 222 10% 17%;
+    --sidebar-ring: 170 30% 42%;
 
-    --chart-1: 172 55% 42%;
-    --chart-2: 187 50% 50%;
-    --chart-3: 199 45% 55%;
-    --chart-4: 162 50% 48%;
-    --chart-5: 152 45% 55%;
+    --chart-1: 170 30% 42%;
+    --chart-2: 186 35% 48%;
+    --chart-3: 200 32% 54%;
+    --chart-4: 156 32% 46%;
+    --chart-5: 146 28% 52%;
   }
 }
 
@@ -110,48 +110,48 @@
 /* Dark mode: explicit data-theme attribute           */
 /* -------------------------------------------------- */
 :root[data-theme="dark"] {
-  --background: 222 22% 8%;
-  --foreground: 210 20% 96%;
+  --background: 224 18% 9%;
+  --foreground: 210 15% 94%;
 
-  --card: 222 20% 11%;
-  --card-foreground: 210 20% 96%;
+  --card: 224 16% 12%;
+  --card-foreground: 210 15% 94%;
 
-  --popover: 222 20% 11%;
-  --popover-foreground: 210 20% 96%;
+  --popover: 224 16% 12%;
+  --popover-foreground: 210 15% 94%;
 
-  --primary: 172 55% 42%;
-  --primary-foreground: 222 22% 8%;
+  --primary: 170 30% 42%;
+  --primary-foreground: 224 18% 9%;
 
-  --secondary: 217 16% 16%;
-  --secondary-foreground: 210 20% 90%;
+  --secondary: 222 12% 15%;
+  --secondary-foreground: 210 12% 86%;
 
-  --muted: 217 16% 16%;
-  --muted-foreground: 215 14% 56%;
+  --muted: 222 12% 15%;
+  --muted-foreground: 220 8% 54%;
 
-  --accent: 217 16% 16%;
-  --accent-foreground: 210 20% 90%;
+  --accent: 222 12% 15%;
+  --accent-foreground: 210 12% 86%;
 
-  --destructive: 0 62% 50%;
+  --destructive: 0 58% 52%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 217 14% 18%;
-  --input: 217 14% 18%;
-  --ring: 172 55% 42%;
+  --border: 222 10% 17%;
+  --input: 222 10% 17%;
+  --ring: 170 30% 42%;
 
-  --sidebar-background: 222 22% 6%;
-  --sidebar-foreground: 210 20% 96%;
-  --sidebar-primary: 172 55% 42%;
-  --sidebar-primary-foreground: 222 22% 8%;
-  --sidebar-accent: 217 16% 16%;
-  --sidebar-accent-foreground: 210 20% 90%;
-  --sidebar-border: 217 14% 18%;
-  --sidebar-ring: 172 55% 42%;
+  --sidebar-background: 224 18% 7%;
+  --sidebar-foreground: 210 15% 94%;
+  --sidebar-primary: 170 30% 42%;
+  --sidebar-primary-foreground: 224 18% 9%;
+  --sidebar-accent: 222 12% 15%;
+  --sidebar-accent-foreground: 210 12% 86%;
+  --sidebar-border: 222 10% 17%;
+  --sidebar-ring: 170 30% 42%;
 
-  --chart-1: 172 55% 42%;
-  --chart-2: 187 50% 50%;
-  --chart-3: 199 45% 55%;
-  --chart-4: 162 50% 48%;
-  --chart-5: 152 45% 55%;
+  --chart-1: 170 30% 42%;
+  --chart-2: 186 35% 48%;
+  --chart-3: 200 32% 54%;
+  --chart-4: 156 32% 46%;
+  --chart-5: 146 28% 52%;
 }
 
 /* -------------------------------------------------- */
@@ -215,22 +215,48 @@
   --animate-accordion-up: accordion-up 0.2s ease-out;
 }
 
+/* -------------------------------------------------- */
+/* Keyframes                                          */
+/* -------------------------------------------------- */
 @keyframes accordion-down {
-  from {
-    height: 0;
-  }
-  to {
-    height: var(--radix-accordion-content-height);
-  }
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
 }
 
 @keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+
+@keyframes auth-enter {
   from {
-    height: var(--radix-accordion-content-height);
+    opacity: 0;
+    transform: translateY(16px);
   }
   to {
-    height: 0;
+    opacity: 1;
+    transform: translateY(0);
   }
+}
+
+@keyframes drift-1 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(12px, -8px); }
+}
+
+@keyframes drift-2 {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(-10px, 6px); }
+  66% { transform: translate(8px, -4px); }
+}
+
+@keyframes drift-3 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-8px, -10px); }
+}
+
+@keyframes data-flow {
+  to { stroke-dashoffset: -20; }
 }
 
 /* -------------------------------------------------- */
@@ -244,16 +270,55 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
-    background-image:
-      radial-gradient(circle at 78% -10%, hsl(var(--primary) / 0.08), transparent 30rem),
-      radial-gradient(circle at 18% 110%, hsl(199 70% 50% / 0.05), transparent 28rem);
     min-height: 100vh;
   }
 
-  ::selection { background: hsl(var(--primary) / 0.2); }
+  ::selection {
+    background: hsl(var(--primary) / 0.15);
+  }
 }
 
+/* -------------------------------------------------- */
+/* Component layer                                    */
+/* -------------------------------------------------- */
 @layer components {
-  .bg-card { box-shadow: 0 1px 2px hsl(220 30% 10% / 0.03), 0 14px 40px -32px hsl(var(--primary) / 0.35); }
+  .auth-stagger {
+    animation: auth-enter 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--stagger, 0) * 100ms);
+  }
+
+  .auth-drift-1 { animation: drift-1 50s ease-in-out infinite; }
+  .auth-drift-2 { animation: drift-2 40s ease-in-out infinite; }
+  .auth-drift-3 { animation: drift-3 55s ease-in-out infinite; }
+
+  .auth-flow-slow { stroke-dasharray: 8 12; animation: data-flow 3.2s linear infinite; }
+  .auth-flow-med { stroke-dasharray: 8 12; animation: data-flow 2.4s linear infinite; }
+  .auth-flow-fast { stroke-dasharray: 8 12; animation: data-flow 1.8s linear infinite; }
+  .auth-flow-cross { stroke-dasharray: 6 14; animation: data-flow 4s linear infinite; }
+
+  .bg-card {
+    box-shadow: 0 1px 2px hsl(220 15% 10% / 0.03);
+  }
+
   summary::-webkit-details-marker { display: none; }
+}
+
+/* -------------------------------------------------- */
+/* Reduced motion                                     */
+/* -------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .auth-stagger {
+    animation: none !important;
+    opacity: 1;
+  }
+
+  .auth-drift-1,
+  .auth-drift-2,
+  .auth-drift-3,
+  .auth-flow-slow,
+  .auth-flow-med,
+  .auth-flow-fast,
+  .auth-flow-cross {
+    animation: none !important;
+  }
 }

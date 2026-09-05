@@ -52,8 +52,8 @@ export default async function ServicePage({ params, searchParams }: {
 
   return <div className="space-y-8">
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div><p className="text-[11px] font-bold uppercase tracking-[.2em] text-primary">{service.type} service</p>
-        <h2 className="mt-2 text-3xl font-black tracking-[-.04em]">{service.name}</h2>
+      <div><p className="text-xs font-medium uppercase tracking-widest text-primary">{service.type} service</p>
+        <h2 className="mt-2 text-3xl font-semibold tracking-tight">{service.name}</h2>
         <p className="mt-1 font-mono text-xs text-muted-foreground">{current.environment.trellisNamespace} / {service.slug}</p></div>
       <div className="flex flex-wrap gap-2">
         {service.type === 'cron' ? <NoopButton feature="Cron and periodic jobs"><Play className="mr-2 h-4 w-4" />Deploy</NoopButton> : <form action={deployServiceAction.bind(null, service.id, current.environment.id)}><Button><Play className="mr-2 h-4 w-4" />Deploy</Button></form>}
@@ -92,7 +92,7 @@ export default async function ServicePage({ params, searchParams }: {
         </form>
       </Card>
       <div className="space-y-5">
-        <Card className="p-5"><div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Scale</p><p className="mt-1 text-3xl font-black">{current.config.replicas}</p></div><Scale className="h-5 w-5 text-primary" /></div><div className="mt-4 flex flex-wrap gap-2">
+        <Card className="p-5"><div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Scale</p><p className="mt-1 text-3xl font-bold">{current.config.replicas}</p></div><Scale className="h-5 w-5 text-primary" /></div><div className="mt-4 flex flex-wrap gap-2">
           <form action={scaleServiceAction.bind(null, service.id, current.environment.id, current.config.replicas + 1)}><Button size="sm" variant="outline">+ 1 replica</Button></form>
           {current.config.replicas === 0 && current.config.pausedReplicas ? <form action={resumeServiceAction.bind(null, service.id, current.environment.id)}><Button size="sm" variant="ghost">Resume {current.config.pausedReplicas}</Button></form> : <form action={scaleServiceAction.bind(null, service.id, current.environment.id, 0)}><Button size="sm" variant="ghost">Pause</Button></form>}
         </div></Card>
