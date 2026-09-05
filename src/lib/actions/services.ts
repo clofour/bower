@@ -13,7 +13,7 @@ import { recordAudit, requireProject, requireService } from '@/lib/actions/share
 import { syncManagedProxy } from '@/lib/managed-proxy'
 import { createDeploymentSpec, notifyDeployment, recordDeploymentEvent } from '@/lib/deployment-runtime'
 import { reconcileProjectDeployments } from '@/lib/deployment-reconciler'
-import type { TrellisJobSpec, TrellisVolume } from '@/types/trellis'
+import type { TrellisExecResponse, TrellisJobSpec, TrellisVolume } from '@/types/trellis'
 
 type Trigger = 'manual' | 'webhook' | 'promotion' | 'rollback' | 'auto_rollback'
 const RESOURCE_TIERS = { small: [100, 134217728], medium: [250, 268435456], large: [500, 536870912], xl: [1000, 1073741824] } as const
@@ -209,6 +209,31 @@ export async function resumeServiceAction(serviceId: string, environmentId: stri
   const access = await requireService(serviceId); if (access.projectRole === 'viewer') throw new Error('Insufficient permissions.')
   const [config] = await db.select().from(serviceConfigs).where(and(eq(serviceConfigs.serviceId, serviceId), eq(serviceConfigs.environmentId, environmentId))).limit(1); if (!config?.pausedReplicas) throw new Error('This service is not paused.')
   await db.update(serviceConfigs).set({ replicas: config.pausedReplicas, pausedReplicas: null, updatedAt: new Date() }).where(eq(serviceConfigs.id, config.id)); await executeDeployment(serviceId, environmentId, 'manual', access.user.id); await recordAudit({ orgId: access.org.id, userId: access.user.id, action: 'service.resumed', resourceType: 'service', resourceId: serviceId, details: { environmentId, replicas: config.pausedReplicas } })
+}
+
+export async function restartServiceAction(serviceId: string, environmentId: string) {
+  const access = await requireService(serviceId); if (access.projectRole === 'viewer') throw new Error('Insufficient permissions.')
+  const [row] = await db.select({ config: serviceConfigs, environment: environments }).from(serviceConfigs).innerJoin(environments, eq(environments.id, serviceConfigs.environmentId)).where(and(eq(serviceConfigs.serviceId, serviceId), eq(serviceConfigs.environmentId, environmentId))).limit(1)
+  if (!row) throw new Error('Service configuration not found.')
+  const jobName = (row.config.activeJobName as string | null) || access.service.slug
+  const client = await getTrellisClient(access.org.id)
+  await client.restartJob(jobName, row.environment.trellisNamespace)
+  await recordAudit({ orgId: access.org.id, userId: access.user.id, action: 'service.restarted', resourceType: 'service', resourceId: serviceId, details: { environmentId, jobName } })
+  revalidatePath(`/projects/${access.project.slug}/services/${access.service.slug}`)
+}
+
+export async function stopAllocationAction(serviceId: string, allocationId: string) {
+  const access = await requireService(serviceId); if (access.projectRole === 'viewer') throw new Error('Insufficient permissions.')
+  const client = await getTrellisClient(access.org.id)
+  await client.stopAllocation(allocationId)
+  await recordAudit({ orgId: access.org.id, userId: access.user.id, action: 'allocation.stopped', resourceType: 'service', resourceId: serviceId, details: { allocationId } })
+  revalidatePath(`/projects/${access.project.slug}/services/${access.service.slug}`)
+}
+
+export async function execAllocationAction(serviceId: string, allocationId: string, task: string, command: string[]): Promise<TrellisExecResponse> {
+  const access = await requireService(serviceId); if (access.projectRole === 'viewer') throw new Error('Insufficient permissions.')
+  const client = await getTrellisClient(access.org.id)
+  return client.execAllocation(allocationId, task, command)
 }
 
 export async function deleteServiceAction(serviceId: string, projectSlug: string): Promise<{ error?: string }> {

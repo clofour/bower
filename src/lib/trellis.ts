@@ -12,6 +12,9 @@ import type {
   TrellisAllocation,
   TrellisEvent,
   TrellisSecret,
+  TrellisJobRevision,
+  TrellisAllocationMetrics,
+  TrellisExecResponse,
 } from '@/types/trellis'
 
 // ---------------------------------------------------------------------------
@@ -187,6 +190,14 @@ export class TrellisClient {
     })
   }
 
+  async restartJob(name: string, namespace?: string): Promise<void> {
+    await this.request<void>('POST', `/v1/jobs/${encodeURIComponent(name)}/restart`, { namespace })
+  }
+
+  async getJobRevisions(name: string, namespace?: string): Promise<TrellisJobRevision[]> {
+    return this.request<TrellisJobRevision[]>('GET', `/v1/jobs/${encodeURIComponent(name)}/revisions`, { namespace })
+  }
+
   // -------------------------------------------------------------------------
   // Namespaces
   // -------------------------------------------------------------------------
@@ -219,6 +230,20 @@ export class TrellisClient {
       'GET',
       `/v1/allocations/${encodeURIComponent(id)}/events`,
     )
+  }
+
+  async stopAllocation(id: string): Promise<void> {
+    await this.request<void>('DELETE', `/v1/allocations/${encodeURIComponent(id)}`)
+  }
+
+  async execAllocation(id: string, task: string, command: string[]): Promise<TrellisExecResponse> {
+    return this.request<TrellisExecResponse>('POST', `/v1/allocations/${encodeURIComponent(id)}/exec`, {
+      body: { task, command },
+    })
+  }
+
+  async getAllocationMetrics(id: string): Promise<TrellisAllocationMetrics[]> {
+    return this.request<TrellisAllocationMetrics[]>('GET', `/v1/allocations/${encodeURIComponent(id)}/metrics`)
   }
 
   async getAllocationLogs(
@@ -284,5 +309,11 @@ export class TrellisClient {
       'DELETE',
       `/v1/namespaces/${encodeURIComponent(namespace)}/secrets/${encodeURIComponent(name)}`,
     )
+  }
+
+  /** Return a raw fetch Response for the SSE event stream. Caller is responsible for piping or consuming the body. */
+  async streamEvents(namespace?: string): Promise<Response> {
+    const url = `${this.baseUrl}/v1/events`
+    return fetch(url, { headers: this.headers(namespace) })
   }
 }

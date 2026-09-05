@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
-import { Activity, Box, Code2, ExternalLink, Play, RotateCcw, Scale, TerminalSquare } from 'lucide-react'
+import { Activity, Box, Code2, ExternalLink, Play, RotateCcw, Scale } from 'lucide-react'
 import { getCurrentUser } from '@/lib/auth'
 import { getDeploymentsByService, getEnvironmentsByProject, getProjectBySlug, getSecretsByProject, getServiceBySlug, getServiceConfigsWithEnvironments, getSidecars } from '@/lib/queries'
 import { getUserOrganization } from '@/lib/queries'
@@ -10,9 +10,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Status } from '@/components/status'
+import { ExecDialog } from '@/components/exec-dialog'
 import { NoopButton } from '@/components/noop-button'
-import { deleteSidecarAction, deployServiceAction, promoteServiceAction, resumeServiceAction, rollbackServiceAction, scaleServiceAction, updateServiceConfigAction, upsertSidecarAction } from '@/lib/actions/services'
-import type { TrellisAllocation } from '@/types/trellis'
+import { deleteSidecarAction, deployServiceAction, promoteServiceAction, restartServiceAction, resumeServiceAction, rollbackServiceAction, scaleServiceAction, stopAllocationAction, updateServiceConfigAction, upsertSidecarAction } from '@/lib/actions/services'
+import type { TrellisAllocation, TrellisAllocationMetrics } from '@/types/trellis'
 
 export default async function ServicePage({ params, searchParams }: {
   params: Promise<{ slug: string; serviceSlug: string }>
@@ -29,8 +30,17 @@ export default async function ServicePage({ params, searchParams }: {
   const currentIndex = configs.findIndex((item) => item.environment.id === current?.environment.id)
   const nextEnvironment = currentIndex >= 0 ? configs[currentIndex + 1]?.environment : undefined
   let allocations: TrellisAllocation[] = []; let connectionError = ''
+  const metricsMap: Record<string, TrellisAllocationMetrics[]> = {}
   if (current && ctx.org.trellisApiUrl && ctx.org.trellisApiToken) {
-    try { allocations = await (await getTrellisClient(ctx.org.id)).listAllocations({ namespace: current.environment.trellisNamespace, job: current.config.activeJobName || service.slug }) }
+    try {
+      const client = await getTrellisClient(ctx.org.id)
+      allocations = await client.listAllocations({ namespace: current.environment.trellisNamespace, job: current.config.activeJobName || service.slug })
+      const metricsResults = await Promise.allSettled(allocations.map((a) => client.getAllocationMetrics(a.id)))
+      for (let i = 0; i < allocations.length; i++) {
+        const result = metricsResults[i]
+        if (result?.status === 'fulfilled') metricsMap[allocations[i]!.id] = result.value
+      }
+    }
     catch (error) { connectionError = error instanceof Error ? error.message : 'Unable to reach Trellis.' }
   }
   if (!current) return <Card className="p-8">Create an environment before configuring this service.</Card>
@@ -49,9 +59,9 @@ export default async function ServicePage({ params, searchParams }: {
         {service.type === 'cron' ? <NoopButton feature="Cron and periodic jobs"><Play className="mr-2 h-4 w-4" />Deploy</NoopButton> : <form action={deployServiceAction.bind(null, service.id, current.environment.id)}><Button><Play className="mr-2 h-4 w-4" />Deploy</Button></form>}
         {nextEnvironment && <form action={promoteServiceAction.bind(null, service.id, current.environment.id, nextEnvironment.id)}><Button variant="secondary">Promote to {nextEnvironment.name}</Button></form>}
         <form action={rollbackServiceAction.bind(null, service.id, current.environment.id)}><Button variant="outline"><RotateCcw className="mr-2 h-4 w-4" />Rollback</Button></form>
-        <NoopButton feature="Restart">Restart</NoopButton>
-        <NoopButton feature="Exec"><TerminalSquare className="mr-2 h-4 w-4" />Exec</NoopButton>
-        <NoopButton feature="Trellis revision history">Revisions</NoopButton>
+        <form action={restartServiceAction.bind(null, service.id, current.environment.id)}><Button variant="outline">Restart</Button></form>
+        <ExecDialog serviceId={service.id} allocations={allocations} />
+        <a href={`/projects/${slug}/services/${serviceSlug}/revisions${current.environment.slug ? `?environment=${current.environment.slug}` : ''}`}><Button variant="outline">Revisions</Button></a>
       </div>
     </div>
 
@@ -91,10 +101,10 @@ export default async function ServicePage({ params, searchParams }: {
     </div>
 
     <div className="grid gap-5 xl:grid-cols-2"><Card className="p-6"><h3 className="font-bold">Sidecars</h3><p className="text-sm text-muted-foreground">Additional containers colocated with the primary task.</p><div className="mt-4 space-y-2">{attachedSidecars.map((sidecar) => <div key={sidecar.id} className="flex items-center justify-between rounded-xl border p-3"><div><b className="text-sm">{sidecar.name}</b><p className="font-mono text-xs text-muted-foreground">{sidecar.image}</p></div><form action={deleteSidecarAction.bind(null, service.id, sidecar.id)}><Button size="sm" variant="ghost">Remove</Button></form></div>)}</div><form action={upsertSidecarAction.bind(null, service.id, current.environment.id)} className="mt-4 grid gap-2 sm:grid-cols-2"><Input name="name" placeholder="Sidecar name" required /><Input name="image" placeholder="Image" required /><Input name="cpu" type="number" defaultValue="100" placeholder="CPU (m)" /><Input name="memory" type="number" defaultValue="128" placeholder="Memory (MiB)" /><Input name="port" type="number" placeholder="Optional port" /><Input name="command" placeholder="Optional command" /><Textarea name="envVars" placeholder="KEY=value" className="sm:col-span-2" /><Button className="sm:col-span-2" variant="secondary">Add sidecar</Button></form></Card>
-      <Card className="p-6"><div className="flex items-center justify-between"><div><h3 className="font-bold">Diagnose</h3><p className="text-sm text-muted-foreground">Failure and pending reasons reported by Trellis.</p></div><NoopButton feature="Per-allocation resource metrics">Metrics</NoopButton></div><div className="mt-4 space-y-2">{diagnostics.length ? diagnostics.map((allocation) => <div key={allocation.id} className="rounded-xl border p-3 text-sm"><div className="flex justify-between"><b className="font-mono">{allocation.id.slice(0, 12)}</b><Status value={allocation.health} /></div><p className="mt-2 text-muted-foreground">{allocation.reason || allocation.phase}: {allocation.message || 'No diagnostic message.'}</p><p className="mt-1 text-xs text-muted-foreground">Attempt {allocation.attempt}{allocation.next_retry_at ? ` · retries ${new Date(allocation.next_retry_at).toLocaleString()}` : ''}</p></div>) : <p className="rounded-xl bg-muted/40 p-4 text-sm text-muted-foreground">No unhealthy, failed, lost, or pending-reason allocations.</p>}</div><div className="mt-6"><h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Recent deployments</h4>{recentDeployments.map((deployment) => <div key={deployment.id} className="mt-2 flex justify-between text-sm"><span className="truncate font-mono">{deployment.imageAfter}</span><Status value={deployment.status} /></div>)}</div></Card></div>
+      <Card className="p-6"><div className="flex items-center justify-between"><div><h3 className="font-bold">Diagnose</h3><p className="text-sm text-muted-foreground">Failure and pending reasons reported by Trellis.</p></div></div><div className="mt-4 space-y-2">{diagnostics.length ? diagnostics.map((allocation) => <div key={allocation.id} className="rounded-xl border p-3 text-sm"><div className="flex justify-between"><b className="font-mono">{allocation.id.slice(0, 12)}</b><Status value={allocation.health} /></div><p className="mt-2 text-muted-foreground">{allocation.reason || allocation.phase}: {allocation.message || 'No diagnostic message.'}</p><p className="mt-1 text-xs text-muted-foreground">Attempt {allocation.attempt}{allocation.next_retry_at ? ` · retries ${new Date(allocation.next_retry_at).toLocaleString()}` : ''}</p></div>) : <p className="rounded-xl bg-muted/40 p-4 text-sm text-muted-foreground">No unhealthy, failed, lost, or pending-reason allocations.</p>}</div><div className="mt-6"><h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Recent deployments</h4>{recentDeployments.map((deployment) => <div key={deployment.id} className="mt-2 flex justify-between text-sm"><span className="truncate font-mono">{deployment.imageAfter}</span><Status value={deployment.status} /></div>)}</div></Card></div>
 
     <section><div className="mb-4 flex items-center justify-between"><div><h3 className="font-bold">Allocations</h3><p className="text-sm text-muted-foreground">Lifecycle and health are reported independently by Trellis.</p></div><Activity className="h-5 w-5 text-muted-foreground" /></div>
-      {connectionError ? <Card className="border-amber-500/20 bg-amber-500/5 p-5 text-sm text-amber-700 dark:text-amber-300">{connectionError}</Card> : allocations.length === 0 ? <Card className="p-8 text-center text-sm text-muted-foreground">No allocations are currently reported for this environment.</Card> : <div className="grid gap-3">{allocations.map((allocation) => <Card key={allocation.id} className="p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-mono text-sm font-semibold">{allocation.id.slice(0, 12)}</p><p className="mt-1 text-xs text-muted-foreground">{allocation.address ?? 'Awaiting node'} · generation {allocation.generation}</p></div><div className="flex gap-2"><Status value={allocation.phase} /><Status value={allocation.health} /></div></div>{allocation.message && <p className="mt-3 text-sm text-muted-foreground">{allocation.message}</p>}<div className="mt-4 flex gap-2"><a href={`/projects/${slug}/services/${service.slug}/allocations/${allocation.id}`}><Button size="sm" variant="outline">Logs & events <ExternalLink className="ml-2 h-3.5 w-3.5" /></Button></a><NoopButton feature="Stop allocation" variant="ghost">Stop</NoopButton></div></Card>)}</div>}
+      {connectionError ? <Card className="border-amber-500/20 bg-amber-500/5 p-5 text-sm text-amber-700 dark:text-amber-300">{connectionError}</Card> : allocations.length === 0 ? <Card className="p-8 text-center text-sm text-muted-foreground">No allocations are currently reported for this environment.</Card> : <div className="grid gap-3">{allocations.map((allocation) => { const metrics = metricsMap[allocation.id]; return <Card key={allocation.id} className="p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-mono text-sm font-semibold">{allocation.id.slice(0, 12)}</p><p className="mt-1 text-xs text-muted-foreground">{allocation.address ?? 'Awaiting node'} · generation {allocation.generation}</p></div><div className="flex gap-2"><Status value={allocation.phase} /><Status value={allocation.health} /></div></div>{allocation.message && <p className="mt-3 text-sm text-muted-foreground">{allocation.message}</p>}{metrics && metrics.length > 0 && <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">{metrics.map((m) => <span key={m.task}><span className="font-mono font-medium">{m.task}</span> · {(m.cpu_usage_nanoseconds / 1e6).toFixed(1)} ms CPU · {Math.round(m.memory_usage_bytes / 1048576)} MiB</span>)}</div>}<div className="mt-4 flex gap-2"><a href={`/projects/${slug}/services/${service.slug}/allocations/${allocation.id}`}><Button size="sm" variant="outline">Logs & events <ExternalLink className="ml-2 h-3.5 w-3.5" /></Button></a><form action={stopAllocationAction.bind(null, service.id, allocation.id)}><Button size="sm" variant="ghost">Stop</Button></form></div></Card> })}</div>}
     </section>
   </div>
 }
