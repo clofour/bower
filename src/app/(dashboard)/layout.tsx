@@ -17,7 +17,7 @@ export default async function DashboardLayout({
 
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-6">
+        <header className="flex h-14 shrink-0 items-center justify-between px-6 lg:px-10">
           {/* Breadcrumb placeholder -- left side (padded for mobile hamburger) */}
           <div className="pl-10 md:pl-0">
             <span className="text-sm font-medium text-foreground">

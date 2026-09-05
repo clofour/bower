@@ -40,8 +40,8 @@ export default async function RevisionsPage({
           <Button variant="ghost" size="sm"><ChevronLeft className="mr-1 h-4 w-4" />Back</Button>
         </a>
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[.2em] text-primary">{service.name}</p>
-          <h2 className="text-2xl font-black tracking-[-.04em]">Revision history</h2>
+          <p className="text-xs font-medium uppercase tracking-widest text-primary">{service.name}</p>
+          <h2 className="text-2xl font-semibold tracking-tight">Revision history</h2>
           {env && <p className="mt-0.5 text-sm text-muted-foreground">Persisted Trellis job revisions · {env.name}</p>}
         </div>
       </div>

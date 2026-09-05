@@ -33,7 +33,7 @@ export function ProjectTabs({ slug }: { slug: string }) {
               key={tab.label}
               href={href}
               className={cn(
-                'border-b-2 pb-3 pt-1 text-sm font-medium transition-colors',
+                'border-b-[1.5px] pb-3 pt-1 text-sm font-medium transition-colors',
                 isActive
                   ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
