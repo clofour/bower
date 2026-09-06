@@ -1,22 +1,30 @@
-import { cn } from '@/lib/utils'
+import { cn } from "@/lib/utils";
 
-const tones: Record<string, string> = {
-  healthy: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  running: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  deploying: 'border-sky-500/20 bg-sky-500/10 text-sky-600 dark:text-sky-400',
-  planning: 'border-sky-500/20 bg-sky-500/10 text-sky-600 dark:text-sky-400',
-  starting: 'border-sky-500/20 bg-sky-500/10 text-sky-600 dark:text-sky-400',
-  placed: 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  pending: 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  unknown: 'border-border bg-muted text-muted-foreground',
-  failed: 'border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400',
-  unhealthy: 'border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400',
-  lost: 'border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400',
-  locked: 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400',
-}
+const palette: Record<string, string> = {
+  healthy: "bg-emerald-500",
+  running: "bg-emerald-500",
+  ready: "bg-emerald-500",
+  deploying: "bg-blue-500 animate-pulse",
+  planning: "bg-blue-500 animate-pulse",
+  pending: "bg-amber-500 animate-pulse",
+  failed: "bg-red-500",
+  lost: "bg-red-500",
+  unhealthy: "bg-red-500",
+  rolled_back: "bg-zinc-400 dark:bg-zinc-500",
+  stopped: "bg-zinc-400 dark:bg-zinc-500",
+  unknown: "bg-zinc-400 dark:bg-zinc-500",
+};
 
-export function Status({ value, dot = true, className }: { value: string; dot?: boolean; className?: string }) {
-  return <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold capitalize', tones[value] ?? tones.unknown, className)}>
-    {dot && <span className="h-1.5 w-1.5 rounded-full bg-current" />}{value.replaceAll('_', ' ')}
-  </span>
+export function Status({ value }: { value: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+      <span
+        className={cn(
+          "inline-block h-1.5 w-1.5 rounded-full",
+          palette[value] ?? palette.unknown
+        )}
+      />
+      {value.replace("_", " ")}
+    </span>
+  );
 }

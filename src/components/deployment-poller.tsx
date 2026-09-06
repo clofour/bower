@@ -1,14 +1,16 @@
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export function DeploymentPoller({ active }: { active: boolean }) {
-  const router = useRouter()
+  const router = useRouter();
+
   useEffect(() => {
-    if (!active) return
-    const timer = window.setInterval(() => router.refresh(), 5000)
-    return () => window.clearInterval(timer)
-  }, [active, router])
-  return null
+    if (!active) return;
+    const id = setInterval(() => router.refresh(), 5000);
+    return () => clearInterval(id);
+  }, [active, router]);
+
+  return null;
 }

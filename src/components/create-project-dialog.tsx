@@ -1,89 +1,91 @@
-'use client'
+"use client";
 
-import { useState, useTransition } from 'react'
-import { Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { useState, useTransition } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import { createProjectAction } from '@/lib/actions/projects'
-import { NoopButton } from '@/components/noop-button'
+} from "@/components/ui/dialog";
+import { Plus } from "lucide-react";
+import { createProjectAction } from "@/lib/actions/projects";
 
-export function CreateProjectDialog({ teams = [] }: { teams?: Array<{ id: string; name: string }> }) {
-  const [open, setOpen] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
+export function CreateProjectDialog({
+  teams,
+}: {
+  teams: { id: string; name: string }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  function handleSubmit(formData: FormData) {
-    setError(null)
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    const formData = new FormData(e.currentTarget);
     startTransition(async () => {
-      const result = await createProjectAction(formData)
+      const result = await createProjectAction(formData);
       if (result?.error) {
-        setError(result.error)
+        setError(result.error);
+      } else {
+        setOpen(false);
       }
-    })
+    });
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus className="mr-1.5 h-4 w-4" />
-          New Project
+        <Button>
+          <Plus className="mr-2 h-4 w-4" />
+          New project
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create Project</DialogTitle>
+          <DialogTitle>Create project</DialogTitle>
         </DialogHeader>
-        <form action={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="project-name">Name</Label>
-            <Input
-              id="project-name"
-              name="name"
-              placeholder="my-app"
-              required
-              autoFocus
-            />
-          </div>
-          <div className="space-y-2"><Label htmlFor="registry-url">Container registry (optional)</Label><Input id="registry-url" name="registryUrl" placeholder="ghcr.io/organization" /></div>
-          <div className="space-y-2"><Label>Owning team</Label><select name="owningTeamId" className="h-9 w-full rounded-md border bg-background px-3 text-sm"><option value="">No owning team</option>{teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}</select></div>
-          <NoopButton feature="Authenticated registry pull-through" className="w-full">Add registry credentials</NoopButton>
-          <div className="space-y-2">
-            <Label htmlFor="project-description">Description (optional)</Label>
-            <Textarea
-              id="project-description"
-              name="description"
-              placeholder="A brief description of the project"
-              rows={3}
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <p className="text-sm text-destructive">{error}</p>
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-sm text-destructive">
+              {error}
+            </div>
           )}
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? 'Creating...' : 'Create Project'}
-            </Button>
-          </DialogFooter>
+          <div className="space-y-2">
+            <Label htmlFor="cp-name">Name</Label>
+            <Input id="cp-name" name="name" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="cp-desc">Description</Label>
+            <Textarea id="cp-desc" name="description" />
+          </div>
+          {teams.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="cp-team">Owning team</Label>
+              <select
+                id="cp-team"
+                name="owningTeamId"
+                className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
+              >
+                <option value="">None</option>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <Button type="submit" className="w-full" disabled={isPending}>
+            {isPending ? "Creating..." : "Create project"}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -1,12 +1,14 @@
-import { Sprout } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Leaf } from "lucide-react";
 
-export function Brand({ compact = false, inverse = false }: { compact?: boolean; inverse?: boolean }) {
-  return <div className="flex items-center gap-2.5">
-    <span className={cn('grid h-8 w-8 place-items-center rounded-lg',
-      inverse ? 'bg-white text-[hsl(224,45%,16%)]' : 'bg-primary text-primary-foreground')}>
-      <Sprout className="h-4 w-4" strokeWidth={2.4} />
-    </span>
-    {!compact && <span className={cn('text-base font-bold tracking-[-0.02em]', inverse ? 'text-white' : 'text-foreground')}>Bower</span>}
-  </div>
+export function Brand() {
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+        <Leaf className="h-4.5 w-4.5 text-primary-foreground" strokeWidth={2.5} />
+      </div>
+      <span className="text-xl font-bold tracking-tight text-foreground">
+        Bower
+      </span>
+    </div>
+  );
 }
