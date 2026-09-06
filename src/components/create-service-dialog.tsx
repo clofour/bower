@@ -37,7 +37,7 @@ export function CreateServiceDialog({
     const formData = new FormData(e.currentTarget);
     formData.set("projectSlug", projectSlug);
     startTransition(async () => {
-      const result = await createServiceAction(formData);
+      const result = await createServiceAction(projectSlug, formData);
       if (result?.error) {
         setError(result.error);
       } else {

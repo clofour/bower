@@ -32,7 +32,7 @@ export function CreateWebhookForm({
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
-      await createWebhookAction(projectId, formData);
+      await createWebhookAction(projectId, {}, formData);
     });
   }
 

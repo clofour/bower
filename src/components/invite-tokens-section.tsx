@@ -2,20 +2,23 @@
 
 import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   createInviteTokenAction,
-  deleteInviteTokenAction,
-} from "@/lib/actions/operations";
+  revokeInviteTokenAction,
+} from "@/lib/actions/settings";
 
 interface Token {
-  id: string;
-  token: string;
-  role: string;
-  usedAt: string | null;
-  createdAt: string;
+  token: {
+    id: string;
+    tokenPrefix: string;
+    role: string;
+    note: string | null;
+    usedAt: Date | null;
+    createdAt: Date;
+  };
+  createdByName: string | null;
 }
 
 export function InviteTokensSection({
@@ -39,21 +42,23 @@ export function InviteTokensSection({
       <div className="mt-4 space-y-2">
         {tokens.map((t) => (
           <div
-            key={t.id}
+            key={t.token.id}
             className="flex items-center justify-between rounded-lg border px-3 py-2"
           >
             <div className="flex items-center gap-2">
-              <code className="font-mono text-sm">{t.token}</code>
+              <code className="font-mono text-sm">{t.token.tokenPrefix}...</code>
               <Badge variant="outline" className="capitalize">
-                {t.role}
+                {t.token.role}
               </Badge>
-              {t.usedAt && (
+              {t.token.usedAt && (
                 <Badge variant="secondary">Used</Badge>
               )}
             </div>
-            {canEdit && !t.usedAt && (
+            {canEdit && !t.token.usedAt && (
               <form
-                action={deleteInviteTokenAction.bind(null, t.id)}
+                action={async (_: FormData) => {
+                  await revokeInviteTokenAction(t.token.id);
+                }}
               >
                 <Button size="sm" variant="ghost">
                   Revoke
@@ -69,7 +74,10 @@ export function InviteTokensSection({
           onSubmit={(e) => {
             e.preventDefault();
             const formData = new FormData(e.currentTarget);
-            startTransition(() => createInviteTokenAction(formData));
+            const role = formData.get("role") as "owner" | "admin" | "member";
+            startTransition(async () => {
+              await createInviteTokenAction(role);
+            });
           }}
           className="mt-4 flex gap-2"
         >

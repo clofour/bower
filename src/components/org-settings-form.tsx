@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { updateOrgAction } from "@/lib/actions/operations";
+import { updateOrganizationAction } from "@/lib/actions/settings";
 
 export function OrgSettingsForm({
   orgName,
@@ -23,7 +23,9 @@ export function OrgSettingsForm({
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    startTransition(() => updateOrgAction(formData));
+    startTransition(async () => {
+      await updateOrganizationAction(formData);
+    });
   }
 
   return (

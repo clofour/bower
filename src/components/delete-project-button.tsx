@@ -49,7 +49,9 @@ export function DeleteProjectButton({
           <AlertDialogAction
             disabled={confirm !== projectName || isPending}
             onClick={() =>
-              startTransition(() => deleteProjectAction(projectId))
+              startTransition(async () => {
+                await deleteProjectAction(projectId);
+              })
             }
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >

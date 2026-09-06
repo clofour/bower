@@ -6,20 +6,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import {
-  updateProfileAction,
+  updateAccountAction,
   changePasswordAction,
-  toggleTotpAction,
+  beginTotpAction,
+  disableTotpAction,
   createApiKeyAction,
-  deleteApiKeyAction,
-} from "@/lib/actions/account";
+  revokeApiKeyAction,
+} from "@/lib/actions/settings";
 
 interface ApiKey {
   id: string;
   name: string;
-  prefix: string;
-  createdAt: string;
+  keyPrefix: string;
+  createdAt: Date;
 }
 
 export function AccountSettingsForm({
@@ -46,9 +46,9 @@ export function AccountSettingsForm({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            startProfileTransition(() =>
-              updateProfileAction(new FormData(e.currentTarget))
-            );
+            startProfileTransition(async () => {
+              await updateAccountAction(new FormData(e.currentTarget));
+            });
           }}
           className="mt-4 space-y-3"
         >
@@ -68,9 +68,9 @@ export function AccountSettingsForm({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            startPwTransition(() =>
-              changePasswordAction(new FormData(e.currentTarget))
-            );
+            startPwTransition(async () => {
+              await changePasswordAction(new FormData(e.currentTarget));
+            });
           }}
           className="mt-4 space-y-3"
         >
@@ -114,7 +114,13 @@ export function AccountSettingsForm({
             checked={totpEnabled}
             disabled={totpPending}
             onCheckedChange={() =>
-              startTotpTransition(() => toggleTotpAction())
+              startTotpTransition(async () => {
+                if (totpEnabled) {
+                  await disableTotpAction();
+                } else {
+                  await beginTotpAction();
+                }
+              })
             }
           />
         </div>
@@ -131,10 +137,14 @@ export function AccountSettingsForm({
               <div>
                 <span className="text-sm font-medium">{key.name}</span>
                 <span className="ml-2 font-mono text-xs text-muted-foreground">
-                  {key.prefix}...
+                  {key.keyPrefix}...
                 </span>
               </div>
-              <form action={deleteApiKeyAction.bind(null, key.id)}>
+              <form
+                action={async (_: FormData) => {
+                  await revokeApiKeyAction(key.id);
+                }}
+              >
                 <Button size="sm" variant="ghost">
                   Revoke
                 </Button>
@@ -156,9 +166,10 @@ export function AccountSettingsForm({
           onSubmit={(e) => {
             e.preventDefault();
             const formData = new FormData(e.currentTarget);
+            const name = formData.get("name") as string;
             startKeyTransition(async () => {
-              const result = await createApiKeyAction(formData);
-              if (result?.key) setNewKey(result.key);
+              const result = await createApiKeyAction(name);
+              if (result && "token" in result && result.token) setNewKey(result.token);
             });
           }}
           className="mt-4 flex gap-2"
