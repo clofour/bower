@@ -67,9 +67,6 @@ task_groups:
 
   - name: web
     count: 1
-    update:
-      strategy: rolling
-      max_parallel: 1
     tasks:
       - name: bower
         image: ghcr.io/clofour/bower:latest
