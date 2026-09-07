@@ -3,7 +3,6 @@ export interface User {
   email: string
   name: string
   avatarUrl: string | null
-  totpEnabled: boolean
   createdAt: Date
 }
 

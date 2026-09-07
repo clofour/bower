@@ -19,7 +19,6 @@ export default async function AccountSettingsPage() {
       <AccountSettingsForm
         userName={user.name}
         userEmail={user.email}
-        totpEnabled={user.totpEnabled}
         apiKeys={await getApiKeys(user.id)}
       />
     </div>
