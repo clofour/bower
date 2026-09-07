@@ -1,23 +1,8 @@
-"use client";
+'use client'
 
-import { Button } from "@/components/ui/button";
-import type { ComponentPropsWithoutRef } from "react";
+import { Button } from '@/components/ui/button'
+import type { ButtonProps } from '@/components/ui/button'
 
-export function NoopButton({
-  feature,
-  children,
-  ...props
-}: ComponentPropsWithoutRef<typeof Button> & { feature: string }) {
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      {...props}
-      onClick={() =>
-        alert(`${feature} is not yet available in this version of Bower.`)
-      }
-    >
-      {children}
-    </Button>
-  );
+export function NoopButton(props: ButtonProps) {
+  return <Button {...props} onClick={() => {}} />
 }

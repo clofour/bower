@@ -1,14 +1,16 @@
-import { Leaf } from "lucide-react";
+import { Leaf } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
-export function Brand() {
+export function Brand({ className, size = 'default' }: { className?: string; size?: 'sm' | 'default' | 'lg' }) {
+  const iconSize = size === 'sm' ? 'h-5 w-5' : size === 'lg' ? 'h-8 w-8' : 'h-6 w-6'
+  const textSize = size === 'sm' ? 'text-base' : size === 'lg' ? 'text-2xl' : 'text-lg'
+
   return (
-    <div className="flex items-center gap-2.5">
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-        <Leaf className="h-4.5 w-4.5 text-primary-foreground" strokeWidth={2.5} />
+    <div className={cn('flex items-center gap-2', className)}>
+      <div className="flex items-center justify-center rounded-lg bg-primary p-1.5">
+        <Leaf className={cn(iconSize, 'text-primary-foreground')} />
       </div>
-      <span className="text-xl font-bold tracking-tight text-foreground">
-        Bower
-      </span>
+      <span className={cn('font-semibold tracking-tight', textSize)}>Bower</span>
     </div>
-  );
+  )
 }
