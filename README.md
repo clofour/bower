@@ -22,7 +22,7 @@ Bower is an opinionated deployment dashboard built on top of [Trellis](https://g
 
 ### On Trellis
 
-The `trellis.yml` below includes a bundled Postgres container so you can get running without an external database. It uses host networking and assumes both task groups land on the same node, so it works as-is on a single-node cluster. For multi-node clusters, replace the `db` task group with an external database and store the connection string as a Trellis secret instead. For a demo, data persists across container crashes but is lost if the allocation is replaced.
+The `trellis.yaml` below includes a bundled Postgres container so you can get running without an external database. It uses host networking and assumes both task groups land on the same node, so it works as-is on a single-node cluster. For multi-node clusters, replace the `db` task group with an external database and store the connection string as a Trellis secret instead. For a demo, data persists across container crashes but is lost if the allocation is replaced.
 
 #### 1. Set the encryption key secret
 
@@ -31,10 +31,10 @@ The `trellis.yml` below includes a bundled Postgres container so you can get run
 openssl rand -hex 32 | trellisctl --namespace platform secrets set encryption-key --stdin
 ```
 
-#### 2. Apply `trellis.yml`
+#### 2. Apply `trellis.yaml`
 
 ```yaml
-# trellis.yml
+# trellis.yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/clofour/trellis-experimental/main/schemas/trellis-job.schema.json
 name: bower
 namespace: platform
@@ -67,9 +67,6 @@ task_groups:
 
   - name: web
     count: 1
-    update:
-      strategy: rolling
-      max_parallel: 1
     tasks:
       - name: bower
         image: ghcr.io/clofour/bower:latest
@@ -99,27 +96,18 @@ task_groups:
 ```
 
 ```bash
-trellisctl jobs apply --file trellis.yml
+trellisctl --namespace platform jobs apply --file trellis.yaml --wait
 ```
 
-#### 3. Migrations
+#### 3. Finish setup
 
-With `AUTO_MIGRATE=true` (set in the manifest above), the container applies pending migrations on startup before the app begins serving traffic. No manual step is needed.
-
-To run migrations manually instead, unset `AUTO_MIGRATE` and run from a local clone once the `db` allocation is healthy:
+On first startup Bower prints a single-use invite token to the container logs. Retrieve it with:
 
 ```bash
-git clone https://github.com/clofour/trellis-dashboard.git
-cd trellis-dashboard
-npm install
-DATABASE_URL="postgres://bower:bower@<node-ip>:5432/bower" npm run db:migrate
+trellisctl --namespace platform jobs logs bower --tail 50
 ```
 
-Check progress with `trellisctl jobs status bower`.
-
-#### 4. Finish setup
-
-Open Bower at `http://<node-ip>:3000`, create the first organization owner, and add your Trellis API URL and token under **Organization → Cluster**.
+Look for the `Bower — First Run Setup` banner containing the token. Open Bower at `http://<node-ip>:3000`, use the invite token to create the first account, and add your Trellis API URL (`http://<node-ip>:8128`) and operator token under **Organization → Cluster**.
 
 ### Local development
 
@@ -153,11 +141,24 @@ cp .env.example .env.local
 # Set NEXT_SERVER_ACTIONS_ENCRYPTION_KEY to the output of: openssl rand -hex 32
 # DATABASE_URL is already set to match the compose service above
 npm install
-npm run db:migrate
 npm run dev
 ```
 
-Open `http://localhost:3000`, create the first organization owner, then add the Trellis API URL and token under **Organization → Cluster**.
+On first startup the dev server prints a single-use invite token to the terminal. Open `http://localhost:3000`, use the invite token to create the first account, then add the Trellis API URL and operator token under **Organization → Cluster**.
+
+### Migrations
+
+Both setup paths set `AUTO_MIGRATE=true`, which applies pending Drizzle migrations automatically on startup before the app begins serving traffic. No manual step is needed.
+
+To run migrations manually instead, unset `AUTO_MIGRATE` and use `npm run db:migrate` with the appropriate `DATABASE_URL`:
+
+```bash
+# Local development (from the repo root)
+npm run db:migrate
+
+# Against a Trellis-deployed Postgres
+DATABASE_URL="postgres://bower:bower@<node-ip>:5432/bower" npm run db:migrate
+```
 
 ## Commands
 
