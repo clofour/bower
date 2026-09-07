@@ -107,8 +107,6 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   passwordHash: text("password_hash").notNull(),
   avatarUrl: text("avatar_url"),
-  totpSecret: text("totp_secret"),
-  totpEnabled: boolean("totp_enabled").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

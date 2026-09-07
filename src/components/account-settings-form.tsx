@@ -5,12 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import {
   updateAccountAction,
   changePasswordAction,
-  beginTotpAction,
-  disableTotpAction,
   createApiKeyAction,
   revokeApiKeyAction,
 } from "@/lib/actions/settings";
@@ -25,17 +22,14 @@ interface ApiKey {
 export function AccountSettingsForm({
   userName,
   userEmail,
-  totpEnabled,
   apiKeys,
 }: {
   userName: string;
   userEmail: string;
-  totpEnabled: boolean;
   apiKeys: ApiKey[];
 }) {
   const [profilePending, startProfileTransition] = useTransition();
   const [pwPending, startPwTransition] = useTransition();
-  const [totpPending, startTotpTransition] = useTransition();
   const [keyPending, startKeyTransition] = useTransition();
   const [newKey, setNewKey] = useState<string | null>(null);
 
@@ -98,32 +92,6 @@ export function AccountSettingsForm({
             {pwPending ? "Changing..." : "Change password"}
           </Button>
         </form>
-      </Card>
-
-      <Card className="p-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-medium">Two-factor authentication</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {totpEnabled
-                ? "TOTP is enabled on your account."
-                : "Add an authenticator app for extra security."}
-            </p>
-          </div>
-          <Switch
-            checked={totpEnabled}
-            disabled={totpPending}
-            onCheckedChange={() =>
-              startTotpTransition(async () => {
-                if (totpEnabled) {
-                  await disableTotpAction();
-                } else {
-                  await beginTotpAction();
-                }
-              })
-            }
-          />
-        </div>
       </Card>
 
       <Card className="p-5">

@@ -82,7 +82,6 @@ export async function validateSession(
     email: userRow.email,
     name: userRow.name,
     avatarUrl: userRow.avatarUrl,
-    totpEnabled: userRow.totpEnabled,
     createdAt: new Date(userRow.createdAt),
   }
 

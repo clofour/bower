@@ -14,7 +14,6 @@ import {
   getSessionCookieConfig,
   SESSION_COOKIE_NAME,
 } from '@/lib/auth'
-import { verifyTotpCode } from '@/lib/totp'
 import { recordAudit } from '@/lib/actions/shared'
 
 export async function loginAction(
@@ -22,7 +21,6 @@ export async function loginAction(
 ): Promise<{ error?: string }> {
   const email = formData.get('email')
   const password = formData.get('password')
-  const totpCode = formData.get('totpCode')
 
   if (
     typeof email !== 'string' ||
@@ -50,10 +48,6 @@ export async function loginAction(
 
   if (!passwordValid) {
     return { error: 'Invalid email or password.' }
-  }
-
-  if (user.totpEnabled && (!user.totpSecret || typeof totpCode !== 'string' || !verifyTotpCode(user.totpSecret, totpCode))) {
-    return { error: 'Enter a valid authenticator code.' }
   }
 
   const { token, expiresAt } = await createSession(user.id)

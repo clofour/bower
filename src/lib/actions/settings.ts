@@ -6,7 +6,6 @@ import { organizations, users, inviteTokens } from '@/db/schema'
 import { apiKeys } from '@/db/schema'
 import { createHash, randomBytes } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
-import { createTotpSecret, verifyTotpCode } from '@/lib/totp'
 import { getCurrentUser, hashPassword, verifyPassword } from '@/lib/auth'
 import { getUserOrganization } from '@/lib/queries'
 import { recordAudit } from './shared'
@@ -109,29 +108,6 @@ export async function changePasswordAction(
   const ctx = await getUserOrganization(user.id); if (ctx) await recordAudit({ orgId: ctx.org.id, userId: user.id, action: 'account.password.changed', resourceType: 'user', resourceId: user.id })
 
   return { success: true }
-}
-
-export async function beginTotpAction() {
-  const user = await getCurrentUser(); if (!user) return { error: 'Not authenticated.' }
-  const secret = createTotpSecret()
-  await db.update(users).set({ totpSecret: secret, totpEnabled: false, updatedAt: new Date() }).where(eq(users.id, user.id))
-  return { secret, uri: `otpauth://totp/Bower:${encodeURIComponent(user.email)}?secret=${secret}&issuer=Bower` }
-}
-
-export async function confirmTotpAction(code: string) {
-  const user = await getCurrentUser(); if (!user) return { error: 'Not authenticated.' }
-  const [record] = await db.select().from(users).where(eq(users.id, user.id)).limit(1)
-  if (!record?.totpSecret || !verifyTotpCode(record.totpSecret, code)) return { error: 'That code is not valid.' }
-  await db.update(users).set({ totpEnabled: true, updatedAt: new Date() }).where(eq(users.id, user.id))
-  const ctx = await getUserOrganization(user.id); if (ctx) await recordAudit({ orgId: ctx.org.id, userId: user.id, action: 'account.totp.enabled', resourceType: 'user', resourceId: user.id })
-  revalidatePath('/settings/account'); return { success: true }
-}
-
-export async function disableTotpAction() {
-  const user = await getCurrentUser(); if (!user) return { error: 'Not authenticated.' }
-  await db.update(users).set({ totpSecret: null, totpEnabled: false, updatedAt: new Date() }).where(eq(users.id, user.id))
-  const ctx = await getUserOrganization(user.id); if (ctx) await recordAudit({ orgId: ctx.org.id, userId: user.id, action: 'account.totp.disabled', resourceType: 'user', resourceId: user.id })
-  revalidatePath('/settings/account'); return { success: true }
 }
 
 export async function createApiKeyAction(name: string) {

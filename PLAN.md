@@ -197,7 +197,6 @@ All secrets are stored in Trellis via its namespace-scoped secrets API. Bower ad
 ### Auth system
 - Email/password registration + login with bcrypt-hashed passwords
 - Session-based auth (httpOnly cookies)
-- Optional TOTP 2FA
 - API keys for automation (webhook receivers)
 
 ### RBAC model
@@ -286,7 +285,7 @@ Features that Bower implements as noop until Trellis adds support:
 - **Frontend**: Next.js 15, React, Tailwind CSS, shadcn/ui
 - **Backend**: Next.js API routes
 - **Database**: PostgreSQL (via Drizzle ORM)
-- **Auth**: Custom with bcrypt + sessions + optional TOTP
+- **Auth**: Custom with bcrypt + sessions
 - **Real-time**: SSE for deployment progress (polling until Trellis adds event streaming)
 - **Proxy**: Caddy (managed as a Trellis job per namespace)
 
