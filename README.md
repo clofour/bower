@@ -160,7 +160,7 @@ npm run db:migrate
 npm run dev
 ```
 
-Open `http://localhost:3000`, create the first organization owner, then add the Trellis API URL and token under **Organization → Cluster**.
+On first startup the dev server prints a single-use invite token to the terminal. Open `http://localhost:3000`, use the invite token to create the first account, then add the Trellis API URL and operator token under **Organization → Cluster**.
 
 ## Commands
 
