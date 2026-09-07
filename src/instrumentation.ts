@@ -4,7 +4,7 @@ declare global {
 
 async function seedDefaultOrg() {
   const { db } = await import('@/db')
-  const { organizations, inviteTokens } = await import('@/db/schema')
+  const { organizations, instanceTokens } = await import('@/db/schema')
   const { sql } = await import('drizzle-orm')
 
   const [{ count }] = await db
@@ -13,40 +13,38 @@ async function seedDefaultOrg() {
 
   if (count > 0) return
 
-  const apiUrl = process.env.TRELLIS_API_URL ?? ''
-  const apiToken = process.env.TRELLIS_API_TOKEN ?? ''
+  const apiUrl = process.env.TRELLIS_ADDR ?? process.env.TRELLIS_API_URL ?? ''
+  const apiToken = process.env.TRELLIS_TOKEN ?? process.env.TRELLIS_API_TOKEN ?? ''
 
-  const [org] = await db
+  await db
     .insert(organizations)
     .values({
-      name: 'Trellis Cluster',
-      slug: 'trellis-cluster',
+      name: 'Default',
+      slug: 'default',
       trellisApiUrl: apiUrl,
       trellisApiToken: apiToken,
     })
-    .returning({ id: organizations.id })
 
   const { randomBytes, createHash } = await import('node:crypto')
-  const rawToken = `ci_${randomBytes(24).toString('base64url')}`
+  const rawToken = `bi_${randomBytes(24).toString('base64url')}`
   const tokenHash = createHash('sha256').update(rawToken).digest('hex')
   const tokenPrefix = rawToken.slice(0, 11)
 
-  await db.insert(inviteTokens).values({
-    orgId: org.id,
+  await db.insert(instanceTokens).values({
     tokenHash,
     tokenPrefix,
-    role: 'owner',
-    note: 'Bootstrap admin token',
+    note: 'Bootstrap instance admin token',
   })
 
   const line = '═'.repeat(60)
   console.log(`\n╔${line}╗`)
   console.log('║           Bower — First Run Setup                         ║')
   console.log(`╠${line}╣`)
-  console.log('║  Use this invite token to create the first account:        ║')
+  console.log('║  Use this token to create the first account:              ║')
   console.log(`║  ${rawToken.padEnd(58)}║`)
   console.log('║                                                            ║')
-  console.log('║  This token is single-use. Keep it safe.                   ║')
+  console.log('║  This token grants instance admin access.                  ║')
+  console.log('║  It is single-use. Keep it safe.                           ║')
   console.log(`╚${line}╝\n`)
 }
 

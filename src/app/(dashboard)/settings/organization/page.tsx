@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import {
   getUserOrganization,
   getOrgMembers,
-  getInviteTokens,
+  getOrganizationTokens,
 } from "@/lib/queries";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,7 @@ export default async function OrganizationSettingsPage() {
 
   const [members, tokens] = await Promise.all([
     getOrgMembers(ctx.org.id),
-    getInviteTokens(ctx.org.id),
+    getOrganizationTokens(ctx.org.id),
   ]);
 
   const canEdit = ctx.role === "owner" || ctx.role === "admin";

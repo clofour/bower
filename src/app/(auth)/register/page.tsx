@@ -71,7 +71,7 @@ export default function RegisterPage() {
             type="text"
             autoComplete="off"
             required
-            placeholder="ci_..."
+            placeholder="bi_... or ci_..."
           />
         </div>
 

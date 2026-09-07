@@ -67,6 +67,9 @@ task_groups:
 
   - name: web
     count: 1
+    api_access:
+      scope: cluster
+      access: write
     tasks:
       - name: bower
         image: ghcr.io/clofour/bower:latest
@@ -101,13 +104,13 @@ trellisctl --namespace platform jobs apply --file trellis.yaml --wait
 
 #### 3. Finish setup
 
-On first startup Bower prints a single-use invite token to the container logs. Retrieve it with:
+On first startup Bower creates a default organization pre-configured with your cluster's API credentials (injected via `api_access`) and prints a single-use instance admin token to the container logs. Retrieve it with:
 
 ```bash
 trellisctl --namespace platform jobs logs bower --tail 50
 ```
 
-Look for the `Bower — First Run Setup` banner containing the token. Open Bower at `http://<node-ip>:3000`, use the invite token to create the first account, and add your Trellis API URL (`http://<node-ip>:8128`) and operator token under **Organization → Cluster**.
+Look for the `Bower — First Run Setup` banner containing the token. Open Bower at `http://<node-ip>:3000` and use the token to create the first account. The Trellis connection is already configured — no manual cluster setup required.
 
 ### Local development
 
@@ -144,7 +147,7 @@ npm install
 npm run dev
 ```
 
-On first startup the dev server prints a single-use invite token to the terminal. Open `http://localhost:3000`, use the invite token to create the first account, then add the Trellis API URL and operator token under **Organization → Cluster**.
+On first startup the dev server prints a single-use instance admin token to the terminal. Open `http://localhost:3000`, use the token to create the first account, then add the Trellis API URL and operator token under **Organization → Cluster**.
 
 ### Migrations
 
