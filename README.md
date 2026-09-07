@@ -22,7 +22,7 @@ Bower is an opinionated deployment dashboard built on top of [Trellis](https://g
 
 ### On Trellis
 
-The `trellis.yml` below includes a bundled Postgres container so you can get running without an external database. It uses host networking and assumes both task groups land on the same node, so it works as-is on a single-node cluster. For multi-node clusters, replace the `db` task group with an external database and store the connection string as a Trellis secret instead. For a demo, data persists across container crashes but is lost if the allocation is replaced.
+The `trellis.yaml` below includes a bundled Postgres container so you can get running without an external database. It uses host networking and assumes both task groups land on the same node, so it works as-is on a single-node cluster. For multi-node clusters, replace the `db` task group with an external database and store the connection string as a Trellis secret instead. For a demo, data persists across container crashes but is lost if the allocation is replaced.
 
 #### 1. Set the encryption key secret
 
@@ -31,10 +31,10 @@ The `trellis.yml` below includes a bundled Postgres container so you can get run
 openssl rand -hex 32 | trellisctl --namespace platform secrets set encryption-key --stdin
 ```
 
-#### 2. Apply `trellis.yml`
+#### 2. Apply `trellis.yaml`
 
 ```yaml
-# trellis.yml
+# trellis.yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/clofour/trellis-experimental/main/schemas/trellis-job.schema.json
 name: bower
 namespace: platform
@@ -99,7 +99,7 @@ task_groups:
 ```
 
 ```bash
-trellisctl jobs apply --file trellis.yml
+trellisctl --namespace platform jobs apply --file trellis.yaml --wait
 ```
 
 #### 3. Migrations
@@ -109,13 +109,13 @@ With `AUTO_MIGRATE=true` (set in the manifest above), the container applies pend
 To run migrations manually instead, unset `AUTO_MIGRATE` and run from a local clone once the `db` allocation is healthy:
 
 ```bash
-git clone https://github.com/clofour/trellis-dashboard.git
-cd trellis-dashboard
+git clone https://github.com/clofour/bower.git
+cd bower
 npm install
 DATABASE_URL="postgres://bower:bower@<node-ip>:5432/bower" npm run db:migrate
 ```
 
-Check progress with `trellisctl jobs status bower`.
+Check progress with `trellisctl --namespace platform jobs status bower`.
 
 #### 4. Finish setup
 
