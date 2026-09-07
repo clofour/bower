@@ -156,9 +156,10 @@ cp .env.example .env.local
 # Set NEXT_SERVER_ACTIONS_ENCRYPTION_KEY to the output of: openssl rand -hex 32
 # DATABASE_URL is already set to match the compose service above
 npm install
-npm run db:migrate
 npm run dev
 ```
+
+`AUTO_MIGRATE=true` in `.env.example` applies pending migrations automatically on startup, same as the Trellis deployment. To run them separately instead, use `npm run db:migrate`.
 
 On first startup the dev server prints a single-use invite token to the terminal. Open `http://localhost:3000`, use the invite token to create the first account, then add the Trellis API URL and operator token under **Organization → Cluster**.
 
