@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { eq } from 'drizzle-orm'
 import { createHash } from 'node:crypto'
 import { db } from '@/db'
-import { users, organizationMembers, inviteTokens } from '@/db/schema'
+import { users, organizations, organizationMembers, organizationTokens, instanceTokens } from '@/db/schema'
 import {
   hashPassword,
   verifyPassword,
@@ -86,29 +86,9 @@ export async function registerAction(
     return { error: 'Password must be at least 8 characters.' }
   }
 
-  // Validate invite token
   const tokenHash = createHash('sha256').update(trimmedToken).digest('hex')
-  const tokenRows = await db
-    .select()
-    .from(inviteTokens)
-    .where(eq(inviteTokens.tokenHash, tokenHash))
-    .limit(1)
 
-  if (tokenRows.length === 0) {
-    return { error: 'Invalid invite token.' }
-  }
-
-  const invite = tokenRows[0]
-
-  if (invite.usedAt) {
-    return { error: 'This invite token has already been used.' }
-  }
-
-  if (invite.expiresAt && invite.expiresAt < new Date()) {
-    return { error: 'This invite token has expired.' }
-  }
-
-  // Check email uniqueness
+  // Check email uniqueness early
   const existingUsers = await db
     .select()
     .from(users)
@@ -121,34 +101,88 @@ export async function registerAction(
 
   const passwordHash = await hashPassword(password)
 
+  // Try instance token first
+  const instanceRows = await db
+    .select()
+    .from(instanceTokens)
+    .where(eq(instanceTokens.tokenHash, tokenHash))
+    .limit(1)
+
+  if (instanceRows.length > 0) {
+    const instance = instanceRows[0]
+    if (instance.usedAt) return { error: 'This token has already been used.' }
+    if (instance.expiresAt && instance.expiresAt < new Date()) return { error: 'This token has expired.' }
+
+    const [newUser] = await db
+      .insert(users)
+      .values({ email: normalizedEmail, name: trimmedName, passwordHash, isInstanceAdmin: true })
+      .returning({ id: users.id })
+
+    const allOrgs = await db.select({ id: organizations.id }).from(organizations)
+    for (const org of allOrgs) {
+      await db.insert(organizationMembers).values({
+        orgId: org.id, userId: newUser.id, role: 'owner',
+      })
+    }
+
+    await db
+      .update(instanceTokens)
+      .set({ usedByUserId: newUser.id, usedAt: new Date() })
+      .where(eq(instanceTokens.id, instance.id))
+
+    if (allOrgs.length > 0) {
+      await recordAudit({
+        orgId: allOrgs[0].id, userId: newUser.id,
+        action: 'user.registered', resourceType: 'user', resourceId: newUser.id,
+        details: { name: trimmedName, instanceAdmin: true, tokenPrefix: instance.tokenPrefix },
+      })
+    }
+
+    const { token, expiresAt } = await createSession(newUser.id)
+    const cookieStore = await cookies()
+    cookieStore.set(getSessionCookieConfig(token, expiresAt))
+    redirect('/dashboard')
+  }
+
+  // Fall back to organization token
+  const orgTokenRows = await db
+    .select()
+    .from(organizationTokens)
+    .where(eq(organizationTokens.tokenHash, tokenHash))
+    .limit(1)
+
+  if (orgTokenRows.length === 0) {
+    return { error: 'Invalid token.' }
+  }
+
+  const invite = orgTokenRows[0]
+
+  if (invite.usedAt) {
+    return { error: 'This token has already been used.' }
+  }
+
+  if (invite.expiresAt && invite.expiresAt < new Date()) {
+    return { error: 'This token has expired.' }
+  }
+
   const [newUser] = await db
     .insert(users)
-    .values({
-      email: normalizedEmail,
-      name: trimmedName,
-      passwordHash,
-    })
+    .values({ email: normalizedEmail, name: trimmedName, passwordHash })
     .returning({ id: users.id })
 
   await db.insert(organizationMembers).values({
-    orgId: invite.orgId,
-    userId: newUser.id,
-    role: invite.role,
+    orgId: invite.orgId, userId: newUser.id, role: invite.role,
   })
 
-  // Mark token as used
   await db
-    .update(inviteTokens)
+    .update(organizationTokens)
     .set({ usedByUserId: newUser.id, usedAt: new Date() })
-    .where(eq(inviteTokens.id, invite.id))
+    .where(eq(organizationTokens.id, invite.id))
 
   await recordAudit({
-    orgId: invite.orgId,
-    userId: newUser.id,
-    action: 'user.registered',
-    resourceType: 'user',
-    resourceId: newUser.id,
-    details: { name: trimmedName, role: invite.role, invitePrefix: invite.tokenPrefix },
+    orgId: invite.orgId, userId: newUser.id,
+    action: 'user.registered', resourceType: 'user', resourceId: newUser.id,
+    details: { name: trimmedName, role: invite.role, tokenPrefix: invite.tokenPrefix },
   })
 
   const { token, expiresAt } = await createSession(newUser.id)

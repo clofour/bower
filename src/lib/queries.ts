@@ -24,7 +24,7 @@ import {
   users,
   sharedSecretGroups,
   sharedSecretMembers,
-  inviteTokens,
+  organizationTokens,
 } from '@/db/schema'
 
 export async function getUserOrganization(userId: string) {
@@ -38,8 +38,22 @@ export async function getUserOrganization(userId: string) {
     .where(eq(organizationMembers.userId, userId))
     .limit(1)
 
-  if (rows.length === 0) return null
-  return { org: rows[0].org, role: rows[0].membership.role }
+  if (rows.length > 0) {
+    return { org: rows[0].org, role: rows[0].membership.role }
+  }
+
+  const [user] = await db
+    .select({ isInstanceAdmin: users.isInstanceAdmin })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+
+  if (user?.isInstanceAdmin) {
+    const [org] = await db.select().from(organizations).limit(1)
+    if (org) return { org, role: 'owner' as const }
+  }
+
+  return null
 }
 
 export async function getProjectsByOrg(orgId: string) {
@@ -271,14 +285,14 @@ export async function getApiKeys(userId: string) {
   return db.select().from(apiKeys).where(eq(apiKeys.userId, userId)).orderBy(desc(apiKeys.createdAt))
 }
 
-export async function getInviteTokens(orgId: string) {
+export async function getOrganizationTokens(orgId: string) {
   return db
     .select({
-      token: inviteTokens,
+      token: organizationTokens,
       createdByName: users.name,
     })
-    .from(inviteTokens)
-    .leftJoin(users, eq(users.id, inviteTokens.createdByUserId))
-    .where(eq(inviteTokens.orgId, orgId))
-    .orderBy(desc(inviteTokens.createdAt))
+    .from(organizationTokens)
+    .leftJoin(users, eq(users.id, organizationTokens.createdByUserId))
+    .where(eq(organizationTokens.orgId, orgId))
+    .orderBy(desc(organizationTokens.createdAt))
 }

@@ -107,6 +107,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   passwordHash: text("password_hash").notNull(),
   avatarUrl: text("avatar_url"),
+  isInstanceAdmin: boolean("is_instance_admin").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -185,7 +186,7 @@ export const apiKeys = pgTable("api_keys", {
     .defaultNow(),
 });
 
-export const inviteTokens = pgTable("invite_tokens", {
+export const organizationTokens = pgTable("organization_tokens", {
   id: uuid("id").primaryKey().defaultRandom(),
   orgId: uuid("org_id")
     .notNull()
@@ -193,6 +194,24 @@ export const inviteTokens = pgTable("invite_tokens", {
   tokenHash: text("token_hash").notNull().unique(),
   tokenPrefix: text("token_prefix").notNull(),
   role: orgMemberRoleEnum("role").notNull(),
+  note: text("note"),
+  createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  usedByUserId: uuid("used_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const instanceTokens = pgTable("instance_tokens", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tokenHash: text("token_hash").notNull().unique(),
+  tokenPrefix: text("token_prefix").notNull(),
   note: text("note"),
   createdByUserId: uuid("created_by_user_id").references(() => users.id, {
     onDelete: "set null",

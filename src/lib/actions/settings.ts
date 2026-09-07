@@ -2,7 +2,7 @@
 
 import { and, eq } from 'drizzle-orm'
 import { db } from '@/db'
-import { organizations, users, inviteTokens } from '@/db/schema'
+import { organizations, users, organizationTokens } from '@/db/schema'
 import { apiKeys } from '@/db/schema'
 import { createHash, randomBytes } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
@@ -145,7 +145,7 @@ export async function createInviteTokenAction(
   const tokenHash = createHash('sha256').update(rawToken).digest('hex')
   const tokenPrefix = rawToken.slice(0, 11)
 
-  await db.insert(inviteTokens).values({
+  await db.insert(organizationTokens).values({
     orgId: ctx.org.id,
     tokenHash,
     tokenPrefix,
@@ -168,14 +168,14 @@ export async function revokeInviteTokenAction(id: string) {
 
   const [token] = await db
     .select()
-    .from(inviteTokens)
-    .where(and(eq(inviteTokens.id, id), eq(inviteTokens.orgId, ctx.org.id)))
+    .from(organizationTokens)
+    .where(and(eq(organizationTokens.id, id), eq(organizationTokens.orgId, ctx.org.id)))
     .limit(1)
 
   if (!token) return { error: 'Token not found.' }
   if (token.usedAt) return { error: 'Cannot revoke a token that has already been used.' }
 
-  await db.delete(inviteTokens).where(eq(inviteTokens.id, id))
+  await db.delete(organizationTokens).where(eq(organizationTokens.id, id))
   await recordAudit({ orgId: ctx.org.id, userId: user.id, action: 'invite_token.revoked', resourceType: 'invite_token', resourceId: id, details: { prefix: token.tokenPrefix } })
   revalidatePath('/settings/organization')
   return { success: true }
