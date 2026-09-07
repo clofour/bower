@@ -99,22 +99,7 @@ task_groups:
 trellisctl --namespace platform jobs apply --file trellis.yaml --wait
 ```
 
-#### 3. Migrations
-
-With `AUTO_MIGRATE=true` (set in the manifest above), the container applies pending migrations on startup before the app begins serving traffic. No manual step is needed.
-
-To run migrations manually instead, unset `AUTO_MIGRATE` and run from a local clone once the `db` allocation is healthy:
-
-```bash
-git clone https://github.com/clofour/bower.git
-cd bower
-npm install
-DATABASE_URL="postgres://bower:bower@<node-ip>:5432/bower" npm run db:migrate
-```
-
-Check progress with `trellisctl --namespace platform jobs status bower`.
-
-#### 4. Finish setup
+#### 3. Finish setup
 
 On first startup Bower prints a single-use invite token to the container logs. Retrieve it with:
 
@@ -159,9 +144,21 @@ npm install
 npm run dev
 ```
 
-`AUTO_MIGRATE=true` in `.env.example` applies pending migrations automatically on startup, same as the Trellis deployment. To run them separately instead, use `npm run db:migrate`.
-
 On first startup the dev server prints a single-use invite token to the terminal. Open `http://localhost:3000`, use the invite token to create the first account, then add the Trellis API URL and operator token under **Organization → Cluster**.
+
+### Migrations
+
+Both setup paths set `AUTO_MIGRATE=true`, which applies pending Drizzle migrations automatically on startup before the app begins serving traffic. No manual step is needed.
+
+To run migrations manually instead, unset `AUTO_MIGRATE` and use `npm run db:migrate` with the appropriate `DATABASE_URL`:
+
+```bash
+# Local development (from the repo root)
+npm run db:migrate
+
+# Against a Trellis-deployed Postgres
+DATABASE_URL="postgres://bower:bower@<node-ip>:5432/bower" npm run db:migrate
+```
 
 ## Commands
 
