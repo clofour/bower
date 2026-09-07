@@ -116,7 +116,13 @@ Check progress with `trellisctl --namespace platform jobs status bower`.
 
 #### 4. Finish setup
 
-Open Bower at `http://<node-ip>:3000`, create the first organization owner, and add your Trellis API URL and token under **Organization → Cluster**.
+On first startup Bower prints a single-use invite token to the container logs. Retrieve it with:
+
+```bash
+trellisctl --namespace platform jobs logs bower --tail 50
+```
+
+Look for the `Bower — First Run Setup` banner containing the token. Open Bower at `http://<node-ip>:3000`, use the invite token to create the first account, and add your Trellis API URL (`http://<node-ip>:8128`) and operator token under **Organization → Cluster**.
 
 ### Local development
 
