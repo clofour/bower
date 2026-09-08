@@ -1,6 +1,99 @@
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { requireContext } from '@/lib/actions/shared'
-import { getProjectsForUser } from '@/lib/queries'
+import { getCurrentUser } from '@/lib/auth'
+import { getUserOrganization, getProjectsForUser, getServicesByProject } from '@/lib/queries'
 import { PageHeading } from '@/components/page-heading'
-import { CreateProject } from '@/components/create-project'
-export default async function Projects(){const c=await requireContext();const projects=await getProjectsForUser(c.org.id,c.user.id,c.role);return <><PageHeading eyebrow="Projects" title={`${projects.length} ${projects.length===1?'project':'projects'}`} description="Organize related services, environments, traffic, and credentials."/><div className="grid grid-2"><section><div className="stack">{projects.map(p=><Link className="list-card" href={`/projects/${p.slug}`} key={p.id}><div><h3>{p.name}</h3><p>{p.description||'No description added'}</p></div><span className="pill">Open →</span></Link>)}{!projects.length&&<div className="empty"><strong>No projects yet</strong>Create the first project to begin organizing services.</div>}</div></section>{c.role!=='member'&&<CreateProject/>}</div></>}
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { FolderKanban, ArrowRight } from 'lucide-react'
+
+export default async function ProjectsPage() {
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+
+  const orgCtx = await getUserOrganization(user.id)
+  if (!orgCtx) redirect('/login')
+
+  const projectList = await getProjectsForUser(orgCtx.org.id, user.id, orgCtx.role)
+
+  // Fetch service counts for each project in parallel
+  const serviceCounts = await Promise.all(
+    projectList.map(async (project) => {
+      const svc = await getServicesByProject(project.id)
+      return { projectId: project.id, count: svc.length }
+    })
+  )
+  const serviceCountMap = new Map(serviceCounts.map((s) => [s.projectId, s.count]))
+
+  return (
+    <div className="space-y-6">
+      <PageHeading
+        title="Projects"
+        description="Manage your deployment projects"
+        actions={
+          <Button size="sm" disabled>
+            New project
+          </Button>
+        }
+      />
+
+      {projectList.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <FolderKanban className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h3 className="mb-1 text-sm font-medium">No projects yet</h3>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Create your first project to start deploying services.
+          </p>
+          <Button size="sm" disabled>
+            New project
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {projectList.map((project) => (
+            <Link key={project.id} href={`/projects/${project.slug}`} className="group">
+              <Card className="h-full transition-shadow hover:shadow-md">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <CardTitle className="text-base">{project.name}</CardTitle>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  </div>
+                  {project.description && (
+                    <CardDescription className="line-clamp-2">
+                      {project.description}
+                    </CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <Badge variant="secondary">
+                      {serviceCountMap.get(project.id) ?? 0}{' '}
+                      {(serviceCountMap.get(project.id) ?? 0) === 1 ? 'service' : 'services'}
+                    </Badge>
+                    <span>
+                      Created{' '}
+                      {new Date(project.createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

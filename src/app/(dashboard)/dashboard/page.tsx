@@ -1,6 +1,225 @@
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { requireContext } from '@/lib/actions/shared'
-import { getProjectsForUser, getDeploymentsByProject } from '@/lib/queries'
+import { getCurrentUser } from '@/lib/auth'
+import {
+  getUserOrganization,
+  getProjectsForUser,
+  getDeploymentsByProject,
+  getServicesByProject,
+  getEnvironmentsByProject,
+} from '@/lib/queries'
 import { PageHeading } from '@/components/page-heading'
-import { DateText, Empty, Status } from '@/components/ui'
-export default async function Dashboard(){const c=await requireContext();const projects=await getProjectsForUser(c.org.id,c.user.id,c.role);const batches=await Promise.all(projects.slice(0,6).map(p=>getDeploymentsByProject(p.id,5)));const deployments=batches.flat().sort((a,b)=>+b.deployment.createdAt-+a.deployment.createdAt).slice(0,8);const active=deployments.filter(d=>['planning','deploying'].includes(d.deployment.status)).length;return <><PageHeading eyebrow="Workspace overview" title={`Good to see you, ${c.user.name.split(' ')[0]}.`} description="The current shape of your services across every project and environment." action={<Link className="btn btn-primary" href="/projects">View projects</Link>}/><div className="grid grid-3"><div className="card"><div className="metric-label">Projects</div><div className="metric">{projects.length}</div><p>Workspaces you can access</p></div><div className="card"><div className="metric-label">Recent deployments</div><div className="metric">{deployments.length}</div><p>Across visible projects</p></div><div className="card"><div className="metric-label">In progress</div><div className="metric">{active}</div><p>{active ? 'Changes moving through Trellis' : 'Everything is settled'}</p></div></div><section className="section"><div className="section-head"><h2>Recent activity</h2></div><div className="table-wrap">{deployments.length?<table><thead><tr><th>Service</th><th>Environment</th><th>Status</th><th>Started</th></tr></thead><tbody>{deployments.map(d=><tr key={d.deployment.id}><td><strong>{d.serviceName}</strong></td><td>{d.environmentName}</td><td><Status value={d.deployment.status}/></td><td><DateText value={d.deployment.startedAt}/></td></tr>)}</tbody></table>:<Empty title="No deployments yet">Create a service in a project, then deploy it to an environment.</Empty>}</div></section></>}
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { StatusDot } from '@/components/status'
+import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { FolderKanban, Box, Rocket, Globe, ArrowRight } from 'lucide-react'
+
+export default async function DashboardPage() {
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+
+  const orgCtx = await getUserOrganization(user.id)
+  if (!orgCtx) redirect('/login')
+
+  const projectList = await getProjectsForUser(orgCtx.org.id, user.id, orgCtx.role)
+
+  // Gather stats across all projects in parallel
+  const projectData = await Promise.all(
+    projectList.map(async (project) => {
+      const [svc, deploys, envs] = await Promise.all([
+        getServicesByProject(project.id),
+        getDeploymentsByProject(project.id, 10),
+        getEnvironmentsByProject(project.id),
+      ])
+      return { project, services: svc, deployments: deploys, environments: envs }
+    })
+  )
+
+  const totalServices = projectData.reduce((sum, d) => sum + d.services.length, 0)
+  const allDeployments = projectData.flatMap((d) => d.deployments)
+  allDeployments.sort(
+    (a, b) =>
+      new Date(b.deployment.createdAt).getTime() -
+      new Date(a.deployment.createdAt).getTime()
+  )
+  const recentDeployments = allDeployments.slice(0, 10)
+  const totalEnvironments = new Set(
+    projectData.flatMap((d) => d.environments.map((e) => e.id))
+  ).size
+
+  const recentProjects = projectList.slice(0, 6)
+
+  return (
+    <div className="space-y-8">
+      <PageHeading
+        title="Dashboard"
+        description={`Welcome back, ${user.name.split(' ')[0]}`}
+      />
+
+      {/* Stats cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total projects
+            </CardTitle>
+            <FolderKanban className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{projectList.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total services
+            </CardTitle>
+            <Box className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{totalServices}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Recent deployments
+            </CardTitle>
+            <Rocket className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{allDeployments.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Active environments
+            </CardTitle>
+            <Globe className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{totalEnvironments}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent projects */}
+      {recentProjects.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold tracking-tight">Recent projects</h2>
+            {projectList.length > 6 && (
+              <Link
+                href="/projects"
+                className="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                View all
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            )}
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {recentProjects.map((project) => {
+              const data = projectData.find((d) => d.project.id === project.id)
+              return (
+                <Link key={project.id} href={`/projects/${project.slug}`} className="group">
+                  <Card className="transition-shadow hover:shadow-md">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <CardTitle className="text-base">{project.name}</CardTitle>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                      </div>
+                      {project.description && (
+                        <p className="line-clamp-1 text-sm text-muted-foreground">
+                          {project.description}
+                        </p>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary">
+                          {data?.services.length ?? 0}{' '}
+                          {(data?.services.length ?? 0) === 1 ? 'service' : 'services'}
+                        </Badge>
+                        <Badge variant="secondary">
+                          {data?.environments.length ?? 0}{' '}
+                          {(data?.environments.length ?? 0) === 1 ? 'env' : 'envs'}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Recent deployments */}
+      {recentDeployments.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight">Recent deployments</h2>
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Service</TableHead>
+                  <TableHead>Environment</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Triggered by</TableHead>
+                  <TableHead className="text-right">Time</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentDeployments.map((row) => (
+                  <TableRow key={row.deployment.id}>
+                    <TableCell className="font-medium">{row.serviceName}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{row.environmentName}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <StatusDot status={row.deployment.status} />
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {row.userName ?? 'System'}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {new Date(row.deployment.createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {projectList.length === 0 && (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <FolderKanban className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h3 className="mb-1 text-sm font-medium">No projects yet</h3>
+          <p className="text-sm text-muted-foreground">
+            Create your first project to get started.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}

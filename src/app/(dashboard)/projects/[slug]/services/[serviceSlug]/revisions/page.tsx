@@ -1,2 +1,83 @@
-import Link from 'next/link';import { notFound } from 'next/navigation';import { requireContext } from '@/lib/actions/shared';import { getProjectBySlug,getServiceBySlug,getDeploymentsByService } from '@/lib/queries';import { PageHeading } from '@/components/page-heading';import { DateText,Empty,Status } from '@/components/ui'
-export default async function Page({params}:{params:Promise<{slug:string;serviceSlug:string}>}){const x=await params,c=await requireContext(),p=await getProjectBySlug(c.org.id,x.slug);if(!p)notFound();const s=await getServiceBySlug(p.id,x.serviceSlug);if(!s)notFound();const rows=await getDeploymentsByService(s.id,50);return <><div className="crumbs"><Link href={`/projects/${x.slug}/services/${x.serviceSlug}`}>{s.name}</Link><span>/</span><span>Revisions</span></div><PageHeading eyebrow="Release archive" title="Revisions" description="Immutable deployment records available for review and rollback."/><div className="table-wrap">{rows.length?<table><thead><tr><th>Revision</th><th>Image</th><th>Status</th><th>Created</th></tr></thead><tbody>{rows.map(d=><tr key={d.id}><td className="mono">{d.trellisRevision??'Pending'}</td><td className="mono">{d.imageAfter}</td><td><Status value={d.status}/></td><td><DateText value={d.createdAt}/></td></tr>)}</tbody></table>:<Empty title="No revisions yet">The first successful deployment creates a revision.</Empty>}</div></>}
+import { redirect, notFound } from 'next/navigation'
+import Link from 'next/link'
+import { getCurrentUser } from '@/lib/auth'
+import { getUserOrganization, getProjectBySlug, getServiceBySlug, getServiceConfigsWithEnvironments } from '@/lib/queries'
+import { getTrellisClient } from '@/lib/trellis-instance'
+import { PageHeading } from '@/components/page-heading'
+import { Card, CardContent } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ArrowLeft } from 'lucide-react'
+import type { TrellisJobRevision } from '@/types/trellis'
+
+export default async function RevisionsPage({ params }: { params: Promise<{ slug: string; serviceSlug: string }> }) {
+  const { slug, serviceSlug } = await params
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+  const orgCtx = await getUserOrganization(user.id)
+  if (!orgCtx) redirect('/login')
+  const project = await getProjectBySlug(orgCtx.org.id, slug)
+  if (!project) notFound()
+  const service = await getServiceBySlug(project.id, serviceSlug)
+  if (!service) notFound()
+
+  const configs = await getServiceConfigsWithEnvironments(service.id)
+  const activeConfig = configs.find((c) => c.config.activeJobName)
+
+  let revisions: TrellisJobRevision[] = []
+  if (activeConfig) {
+    try {
+      const client = await getTrellisClient(orgCtx.org.id)
+      revisions = await client.getJobRevisions(activeConfig.config.activeJobName!)
+    } catch {
+      // Trellis may be unreachable
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Link href={`/projects/${slug}/services/${serviceSlug}`} className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
+        <PageHeading title="Revisions" eyebrow={service.name} />
+      </div>
+
+      {!activeConfig ? (
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">
+            No active Trellis job for this service.
+          </CardContent>
+        </Card>
+      ) : revisions.length === 0 ? (
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">
+            No revisions found.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Revision</TableHead>
+                <TableHead>Job</TableHead>
+                <TableHead>Created</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {revisions.map((rev) => (
+                <TableRow key={rev.revision}>
+                  <TableCell className="font-mono">{rev.revision}</TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">{rev.spec.name}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {new Date(rev.created_at).toLocaleString()}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  )
+}

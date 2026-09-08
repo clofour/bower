@@ -1,7 +1,91 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
-import { requireContext } from '@/lib/actions/shared'
-import { getProjectBySlug,getServicesByProject,getEnvironmentsByProject,getDeploymentsByProject } from '@/lib/queries'
-import { PageHeading } from '@/components/page-heading'
-import { Status } from '@/components/ui'
-export default async function Project({params}:{params:Promise<{slug:string}>}){const {slug}=await params;const c=await requireContext();const p=await getProjectBySlug(c.org.id,slug);if(!p)notFound();const [services,envs,deps]=await Promise.all([getServicesByProject(p.id),getEnvironmentsByProject(p.id),getDeploymentsByProject(p.id,10)]);return <><PageHeading eyebrow="Project" title={p.name} description={p.description||'Services and environments in this project.'}/><div className="grid grid-3"><div className="card"><div className="metric-label">Services</div><div className="metric">{services.length}</div></div><div className="card"><div className="metric-label">Environments</div><div className="metric">{envs.length}</div></div><div className="card"><div className="metric-label">Latest state</div><div style={{marginTop:18}}><Status value={deps[0]?.deployment.status||'ready'}/></div></div></div><section className="section"><div className="section-head"><h2>Services</h2></div><div className="stack">{services.map(s=><Link href={`/projects/${slug}/services/${s.slug}`} className="list-card" key={s.id}><div><h3>{s.name}</h3><p>{s.type} service</p></div><span className="pill">{s.type}</span></Link>)}{!services.length&&<div className="empty"><strong>No services yet</strong>Add a service when an image is ready to run.</div>}</div></section></>}
+import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth'
+import { getUserOrganization, getProjectBySlug, getServicesByProject } from '@/lib/queries'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Plus, Server, Cpu, Clock, Box } from 'lucide-react'
+import { CreateServiceDialog } from '@/components/create-service-dialog'
+
+const typeIcons: Record<string, React.ReactNode> = {
+  web: <Server className="h-4 w-4" />,
+  worker: <Cpu className="h-4 w-4" />,
+  cron: <Clock className="h-4 w-4" />,
+  custom: <Box className="h-4 w-4" />,
+}
+
+const typeVariants: Record<string, 'default' | 'secondary' | 'outline'> = {
+  web: 'default',
+  worker: 'secondary',
+  cron: 'outline',
+  custom: 'outline',
+}
+
+export default async function ProjectOverviewPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+
+  const ctx = await getUserOrganization(user.id)
+  if (!ctx) redirect('/login')
+
+  const { slug } = await params
+  const project = await getProjectBySlug(ctx.org.id, slug)
+  if (!project) redirect('/projects')
+
+  const services = await getServicesByProject(project.id)
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Services</h2>
+        <CreateServiceDialog projectSlug={slug} />
+      </div>
+
+      {services.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Server className="h-10 w-10 text-muted-foreground mb-3" />
+            <h3 className="font-medium text-lg">No services yet</h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+              Create your first service to start deploying containers with Trellis.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {services.map((service) => (
+            <Link
+              key={service.id}
+              href={`/projects/${slug}/services/${service.slug}`}
+              className="block"
+            >
+              <Card className="hover:border-primary/50 transition-colors">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">{service.name}</CardTitle>
+                    <Badge variant={typeVariants[service.type] ?? 'outline'}>
+                      <span className="flex items-center gap-1.5">
+                        {typeIcons[service.type]}
+                        {service.type}
+                      </span>
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground">
+                    Created {new Date(service.createdAt).toLocaleDateString()}
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

@@ -1,2 +1,143 @@
-import { notFound } from 'next/navigation';import { requireContext } from '@/lib/actions/shared';import { getProjectBySlug,getProjectIntegrations } from '@/lib/queries';import { PageHeading } from '@/components/page-heading';import { Empty,Status } from '@/components/ui'
-export default async function Page({params}:{params:Promise<{slug:string}>}){const {slug}=await params,c=await requireContext(),p=await getProjectBySlug(c.org.id,slug);if(!p)notFound();const x=await getProjectIntegrations(p.id);return <><PageHeading eyebrow="Automation" title="Integrations" description="Connect registry events to deployments and route release notifications to your team."/><div className="grid grid-2"><div><div className="section-head"><h2>Deploy webhooks</h2></div><div className="stack">{x.hooks.map(({hook:h,...r})=><div className="list-card" key={h.id}><div><h3>{r.serviceName} → {r.environmentName}</h3><p>{h.provider} · {h.deployMode}</p></div><Status value={h.isActive?'active':'paused'}/></div>)}{!x.hooks.length&&<Empty title="No deploy webhooks">Connect a registry to deploy on image pushes.</Empty>}</div></div><div><div className="section-head"><h2>Notifications</h2></div><div className="stack">{x.channels.map(n=><div className="list-card" key={n.id}><div><h3>{n.name}</h3><p>{n.type}</p></div><Status value={n.isActive?'active':'paused'}/></div>)}{!x.channels.length&&<Empty title="No notification channels">Add Slack or a webhook to follow releases.</Empty>}</div></div></div></>}
+import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth'
+import {
+  getUserOrganization,
+  getProjectBySlug,
+  getProjectIntegrations,
+} from '@/lib/queries'
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Webhook, Bell } from 'lucide-react'
+import { Separator } from '@/components/ui/separator'
+
+export default async function IntegrationsPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+
+  const ctx = await getUserOrganization(user.id)
+  if (!ctx) redirect('/login')
+
+  const { slug } = await params
+  const project = await getProjectBySlug(ctx.org.id, slug)
+  if (!project) redirect('/projects')
+
+  const { hooks, channels } = await getProjectIntegrations(project.id)
+
+  return (
+    <div className="space-y-8">
+      {/* Webhooks section */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Webhook className="h-5 w-5" />
+          Webhooks
+        </h2>
+
+        {hooks.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+              <p className="text-sm text-muted-foreground">
+                No webhook endpoints configured.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Service</TableHead>
+                <TableHead>Environment</TableHead>
+                <TableHead>Provider</TableHead>
+                <TableHead>Deploy Mode</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {hooks.map((row) => (
+                <TableRow key={row.hook.id}>
+                  <TableCell className="font-medium">
+                    {row.serviceName}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{row.environmentName}</Badge>
+                  </TableCell>
+                  <TableCell className="capitalize">
+                    {row.hook.provider}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {row.hook.deployMode.replace(/_/g, ' ')}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={row.hook.isActive ? 'success' : 'outline'}>
+                      {row.hook.isActive ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+
+      <Separator />
+
+      {/* Notification Channels section */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Bell className="h-5 w-5" />
+          Notification Channels
+        </h2>
+
+        {channels.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+              <p className="text-sm text-muted-foreground">
+                No notification channels configured.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {channels.map((channel) => (
+                <TableRow key={channel.id}>
+                  <TableCell className="font-medium">{channel.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="capitalize">
+                      {channel.type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={channel.isActive ? 'success' : 'outline'}
+                    >
+                      {channel.isActive ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+    </div>
+  )
+}
