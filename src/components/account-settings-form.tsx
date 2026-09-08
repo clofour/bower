@@ -1,153 +1,70 @@
-"use client";
+'use client'
 
-import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import {
-  updateAccountAction,
-  changePasswordAction,
-  createApiKeyAction,
-  revokeApiKeyAction,
-} from "@/lib/actions/settings";
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { updateAccountAction } from '@/lib/actions/settings'
 
-interface ApiKey {
-  id: string;
-  name: string;
-  keyPrefix: string;
-  createdAt: Date;
+interface AccountSettingsFormProps {
+  user: {
+    name: string
+    email: string
+    avatarUrl: string | null
+  }
 }
 
-export function AccountSettingsForm({
-  userName,
-  userEmail,
-  apiKeys,
-}: {
-  userName: string;
-  userEmail: string;
-  apiKeys: ApiKey[];
-}) {
-  const [profilePending, startProfileTransition] = useTransition();
-  const [pwPending, startPwTransition] = useTransition();
-  const [keyPending, startKeyTransition] = useTransition();
-  const [newKey, setNewKey] = useState<string | null>(null);
+export function AccountSettingsForm({ user }: AccountSettingsFormProps) {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    setSuccess(false)
+    const formData = new FormData(e.currentTarget)
+    const result = await updateAccountAction(formData)
+    if (result?.error) {
+      setError(result.error)
+    } else if (result?.success) {
+      setSuccess(true)
+      router.refresh()
+    }
+    setLoading(false)
+  }
 
   return (
-    <div className="space-y-6">
-      <Card className="p-5">
-        <h3 className="font-medium">Profile</h3>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            startProfileTransition(async () => {
-              await updateAccountAction(new FormData(e.currentTarget));
-            });
-          }}
-          className="mt-4 space-y-3"
-        >
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Profile</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
+          {success && <div className="rounded-md bg-success/10 p-3 text-sm text-success">Account updated.</div>}
           <div className="space-y-2">
-            <Label htmlFor="acc-name">Name</Label>
-            <Input id="acc-name" name="name" defaultValue={userName} />
-          </div>
-          <p className="text-sm text-muted-foreground">{userEmail}</p>
-          <Button type="submit" disabled={profilePending}>
-            {profilePending ? "Saving..." : "Update profile"}
-          </Button>
-        </form>
-      </Card>
-
-      <Card className="p-5">
-        <h3 className="font-medium">Password</h3>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            startPwTransition(async () => {
-              await changePasswordAction(new FormData(e.currentTarget));
-            });
-          }}
-          className="mt-4 space-y-3"
-        >
-          <div className="space-y-2">
-            <Label htmlFor="acc-current">Current password</Label>
-            <Input
-              id="acc-current"
-              name="currentPassword"
-              type="password"
-              autoComplete="current-password"
-              required
-            />
+            <Label htmlFor="name">Name</Label>
+            <Input id="name" name="name" defaultValue={user.name} required />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="acc-new">New password</Label>
-            <Input
-              id="acc-new"
-              name="newPassword"
-              type="password"
-              autoComplete="new-password"
-              required
-            />
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" defaultValue={user.email} disabled className="bg-muted" />
+            <p className="text-xs text-muted-foreground">Email cannot be changed.</p>
           </div>
-          <Button type="submit" disabled={pwPending}>
-            {pwPending ? "Changing..." : "Change password"}
+          <div className="space-y-2">
+            <Label htmlFor="avatarUrl">Avatar URL</Label>
+            <Input id="avatarUrl" name="avatarUrl" defaultValue={user.avatarUrl ?? ''} placeholder="https://example.com/avatar.png" />
+          </div>
+          <Button type="submit" disabled={loading}>
+            {loading ? 'Saving...' : 'Save changes'}
           </Button>
         </form>
-      </Card>
-
-      <Card className="p-5">
-        <h3 className="font-medium">API keys</h3>
-        <div className="mt-4 space-y-2">
-          {apiKeys.map((key) => (
-            <div
-              key={key.id}
-              className="flex items-center justify-between rounded-lg border px-3 py-2"
-            >
-              <div>
-                <span className="text-sm font-medium">{key.name}</span>
-                <span className="ml-2 font-mono text-xs text-muted-foreground">
-                  {key.keyPrefix}...
-                </span>
-              </div>
-              <form
-                action={async (_: FormData) => {
-                  await revokeApiKeyAction(key.id);
-                }}
-              >
-                <Button size="sm" variant="ghost">
-                  Revoke
-                </Button>
-              </form>
-            </div>
-          ))}
-        </div>
-        {newKey && (
-          <div className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
-            <p className="text-xs text-muted-foreground">
-              Copy this key now — you will not see it again.
-            </p>
-            <code className="mt-1 block break-all font-mono text-sm">
-              {newKey}
-            </code>
-          </div>
-        )}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.currentTarget);
-            const name = formData.get("name") as string;
-            startKeyTransition(async () => {
-              const result = await createApiKeyAction(name);
-              if (result && "token" in result && result.token) setNewKey(result.token);
-            });
-          }}
-          className="mt-4 flex gap-2"
-        >
-          <Input name="name" placeholder="Key name" required />
-          <Button variant="secondary" disabled={keyPending}>
-            {keyPending ? "Creating..." : "Create key"}
-          </Button>
-        </form>
-      </Card>
-    </div>
-  );
+      </CardContent>
+    </Card>
+  )
 }

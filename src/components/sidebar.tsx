@@ -1,158 +1,151 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname } from 'next/navigation'
+import Link from 'next/link'
+import { Brand } from '@/components/brand'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { cn } from '@/lib/utils'
+import { logoutAction } from '@/lib/auth-actions'
 import {
-  Activity,
-  FolderKanban,
   LayoutDashboard,
-  Menu,
+  FolderKanban,
   Server,
-  Settings,
-  User,
+  Building2,
   Users,
-  X,
-} from "lucide-react";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
-import { Brand } from "@/components/brand";
+  BookTemplate,
+  ScrollText,
+  UserCircle,
+  LogOut,
+} from 'lucide-react'
 
-const nav = [
-  { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Projects", href: "/projects", icon: FolderKanban },
-  { label: "Cluster", href: "/cluster", icon: Server },
-] as const;
-
-const settingsNav = [
-  { label: "Organization", href: "/settings/organization", icon: Activity },
-  { label: "Teams", href: "/settings/teams", icon: Users },
-  { label: "Templates", href: "/settings/templates", icon: Settings },
-  { label: "Audit log", href: "/settings/audit", icon: Settings },
-  { label: "Account", href: "/settings/account", icon: User },
-] as const;
-
-function NavLink({
-  href,
-  icon: Icon,
-  label,
-  active,
-}: {
-  href: string;
-  icon: typeof LayoutDashboard;
-  label: string;
-  active: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-        active
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-      )}
-    >
-      <Icon className="h-4 w-4 shrink-0" />
-      {label}
-    </Link>
-  );
+interface NavItem {
+  label: string
+  href: string
+  icon: React.ComponentType<{ className?: string }>
 }
 
-export function Sidebar({
-  userName,
-  userEmail,
-}: {
-  userName: string;
-  userEmail: string;
-}) {
-  const pathname = usePathname();
-  const [open, setOpen] = useState(false);
+const mainNav: NavItem[] = [
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Projects', href: '/projects', icon: FolderKanban },
+  { label: 'Cluster', href: '/cluster', icon: Server },
+]
 
-  const initials = userName
-    .split(" ")
+const settingsNav: NavItem[] = [
+  { label: 'Organization', href: '/settings/organization', icon: Building2 },
+  { label: 'Teams', href: '/settings/teams', icon: Users },
+  { label: 'Templates', href: '/settings/templates', icon: BookTemplate },
+  { label: 'Audit log', href: '/settings/audit', icon: ScrollText },
+  { label: 'Account', href: '/settings/account', icon: UserCircle },
+]
+
+function isActive(pathname: string, href: string) {
+  if (href === '/dashboard') return pathname === '/dashboard'
+  return pathname === href || pathname.startsWith(href + '/')
+}
+
+function getInitials(name: string) {
+  return name
+    .split(' ')
     .map((w) => w[0])
-    .join("")
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
     .toUpperCase()
-    .slice(0, 2);
+}
 
-  const content = (
-    <>
-      <div className="p-5">
-        <Brand />
-      </div>
+interface SidebarProps {
+  user: {
+    name: string
+    email: string
+    avatarUrl: string | null
+  }
+}
 
-      <nav className="flex-1 space-y-1 px-3">
-        {nav.map((item) => (
-          <NavLink
-            key={item.href}
-            {...item}
-            active={
-              item.href === "/dashboard"
-                ? pathname === "/dashboard"
-                : pathname.startsWith(item.href)
-            }
-          />
-        ))}
-
-        <div className="pb-1 pt-5">
-          <p className="px-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">
-            Settings
-          </p>
-        </div>
-        {settingsNav.map((item) => (
-          <NavLink
-            key={item.href}
-            {...item}
-            active={pathname.startsWith(item.href)}
-          />
-        ))}
-      </nav>
-
-      <div className="border-t p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-            {initials}
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{userName}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {userEmail}
-            </p>
-          </div>
-        </div>
-      </div>
-    </>
-  );
+export function Sidebar({ user }: SidebarProps) {
+  const pathname = usePathname()
 
   return (
-    <>
-      {/* Mobile toggle */}
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="fixed left-4 top-3.5 z-50 flex h-8 w-8 items-center justify-center rounded-lg border bg-background text-foreground shadow-sm md:hidden"
-        aria-label={open ? "Close navigation" : "Open navigation"}
-      >
-        {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-      </button>
+    <aside className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col border-r border-sidebar-border bg-sidebar">
+      {/* Brand */}
+      <div className="flex h-14 items-center px-5">
+        <Brand size="sm" className="text-sidebar-foreground" />
+      </div>
 
-      {/* Backdrop */}
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm md:hidden"
-          onClick={() => setOpen(false)}
-        />
-      )}
+      <Separator className="bg-sidebar-border" />
 
-      {/* Sidebar panel */}
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r bg-card transition-transform duration-300 md:relative md:translate-x-0",
-          open ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        {content}
-      </aside>
-    </>
-  );
+      {/* Navigation */}
+      <ScrollArea className="flex-1 px-3 py-4">
+        <nav className="flex flex-col gap-1">
+          {mainNav.map((item) => {
+            const active = isActive(pathname, item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  active
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
+                )}
+              >
+                <item.icon className="h-4 w-4 shrink-0" />
+                {item.label}
+              </Link>
+            )
+          })}
+
+          {/* Settings section */}
+          <p className="mb-1 mt-6 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-muted">
+            Settings
+          </p>
+          {settingsNav.map((item) => {
+            const active = isActive(pathname, item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  active
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
+                )}
+              >
+                <item.icon className="h-4 w-4 shrink-0" />
+                {item.label}
+              </Link>
+            )
+          })}
+        </nav>
+      </ScrollArea>
+
+      <Separator className="bg-sidebar-border" />
+
+      {/* User area */}
+      <div className="flex items-center gap-3 px-4 py-3">
+        <Avatar className="h-8 w-8">
+          {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}
+          <AvatarFallback className="bg-sidebar-accent text-xs text-sidebar-accent-foreground">
+            {getInitials(user.name)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex-1 truncate">
+          <p className="truncate text-sm font-medium text-sidebar-foreground">{user.name}</p>
+          <p className="truncate text-xs text-sidebar-muted">{user.email}</p>
+        </div>
+        <form action={logoutAction}>
+          <button
+            type="submit"
+            className="rounded-md p-1.5 text-sidebar-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            title="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </form>
+      </div>
+    </aside>
+  )
 }

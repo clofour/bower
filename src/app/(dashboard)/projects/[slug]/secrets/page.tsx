@@ -1,140 +1,112 @@
-import { notFound, redirect } from "next/navigation";
-import { KeyRound, Plus, Trash2 } from "lucide-react";
-import { getCurrentUser } from "@/lib/auth";
+import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth'
 import {
-  getEnvironmentsByProject,
+  getUserOrganization,
   getProjectBySlug,
   getSecretsByProject,
-  getUserOrganization,
-} from "@/lib/queries";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { NoopButton } from "@/components/noop-button";
+  getEnvironmentsByProject,
+} from '@/lib/queries'
+import { setSecretAction, deleteSecretAction } from '@/lib/actions/operations'
 import {
-  deleteSecretAction,
-  setSecretAction,
-} from "@/lib/actions/operations";
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { KeyRound } from 'lucide-react'
+import { SecretActions } from './secret-actions'
+import { CreateSecretDialog } from './create-secret-dialog'
+
+function formatDate(date: Date | string | null): string {
+  if (!date) return 'Never'
+  return new Date(date).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
 
 export default async function SecretsPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string }>
 }) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  const ctx = await getUserOrganization(user.id);
-  if (!ctx) redirect("/login");
-  const { slug } = await params;
-  const project = await getProjectBySlug(ctx.org.id, slug);
-  if (!project) notFound();
-  const [items, envs] = await Promise.all([
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+
+  const ctx = await getUserOrganization(user.id)
+  if (!ctx) redirect('/login')
+
+  const { slug } = await params
+  const project = await getProjectBySlug(ctx.org.id, slug)
+  if (!project) redirect('/projects')
+
+  const [secrets, environments] = await Promise.all([
     getSecretsByProject(project.id),
     getEnvironmentsByProject(project.id),
-  ]);
+  ])
 
   return (
-    <div>
-      <div className="mb-6 flex items-end justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Secrets</h2>
-          <p className="text-sm text-muted-foreground">
-            Values are written directly to Trellis and never stored by Bower.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <NoopButton feature="Restart consumers after secret rotation">
-            Restart consumers
-          </NoopButton>
-          <details className="relative">
-            <summary className="list-none">
-              <Button asChild>
-                <span>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add secret
-                </span>
-              </Button>
-            </summary>
-            <Card className="absolute right-0 z-20 mt-2 w-80 p-5 shadow-xl">
-              <form
-                action={setSecretAction.bind(null, project.id)}
-                className="space-y-3"
-              >
-                <select
-                  name="environmentId"
-                  className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
-                  required
-                >
-                  <option value="">Choose environment</option>
-                  {envs.map((env) => (
-                    <option key={env.id} value={env.id}>
-                      {env.name}
-                    </option>
-                  ))}
-                </select>
-                <Input name="name" placeholder="DATABASE_URL" required />
-                <Input
-                  name="value"
-                  type="password"
-                  placeholder="Secret value"
-                  required
-                />
-                <Input
-                  name="sharedName"
-                  placeholder="Optional shared logical name"
-                />
-                <Button className="w-full">Store in Trellis</Button>
-              </form>
-            </Card>
-          </details>
-        </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Secrets</h2>
+        <CreateSecretDialog
+          projectId={project.id}
+          environments={environments.map((e) => ({ id: e.id, name: e.name }))}
+        />
       </div>
 
-      {items.length === 0 ? (
-        <Card className="grid place-items-center py-16 text-center">
-          <div>
-            <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-primary/10">
-              <KeyRound className="h-5 w-5 text-primary" />
-            </span>
-            <h3 className="mt-4 font-semibold">No secrets yet</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Add environment-scoped credentials without exposing their values.
+      {secrets.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <KeyRound className="h-10 w-10 text-muted-foreground mb-3" />
+            <h3 className="font-medium text-lg">No secrets</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Add secrets to provide sensitive configuration to your services.
             </p>
-          </div>
+          </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3">
-          {items.map(({ secret, environmentName, sharedName }) => (
-            <Card
-              key={secret.id}
-              className="flex items-center justify-between p-5"
-            >
-              <div>
-                <p className="font-mono text-sm font-medium">{secret.name}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {environmentName}
-                  {sharedName ? ` · shared as ${sharedName}` : ""}{" "}
-                  &middot; rotated{" "}
-                  {secret.lastRotatedAt
-                    ? new Date(secret.lastRotatedAt).toLocaleDateString()
-                    : "never"}
-                </p>
-              </div>
-              <form
-                action={deleteSecretAction.bind(
-                  null,
-                  project.id,
-                  secret.id
-                )}
-              >
-                <Button size="icon" variant="ghost">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </form>
-            </Card>
-          ))}
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Environment</TableHead>
+              <TableHead>Shared Group</TableHead>
+              <TableHead>Last Rotated</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {secrets.map((row) => (
+              <TableRow key={row.secret.id}>
+                <TableCell className="font-mono text-sm font-medium">
+                  {row.secret.name}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{row.environmentName}</Badge>
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {row.sharedName ?? '-'}
+                </TableCell>
+                <TableCell className="text-muted-foreground text-sm">
+                  {formatDate(row.secret.lastRotatedAt)}
+                </TableCell>
+                <TableCell className="text-right">
+                  <SecretActions
+                    projectId={project.id}
+                    secretId={row.secret.id}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
     </div>
-  );
+  )
 }

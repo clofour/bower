@@ -1,74 +1,103 @@
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
-import {
-  getUserOrganization,
-  getOrgMembers,
-  getOrganizationTokens,
-} from "@/lib/queries";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { PageHeading } from "@/components/page-heading";
-import { OrgSettingsForm } from "@/components/org-settings-form";
-import { InviteTokensSection } from "@/components/invite-tokens-section";
+import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth'
+import { getUserOrganization, getOrgMembers, getOrganizationTokens } from '@/lib/queries'
+import { PageHeading } from '@/components/page-heading'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Separator } from '@/components/ui/separator'
+import { OrgSettingsForm } from '@/components/org-settings-form'
+import { InviteTokensSection } from '@/components/invite-tokens-section'
 
 export default async function OrganizationSettingsPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-
-  const ctx = await getUserOrganization(user.id);
-  if (!ctx) redirect("/login");
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+  const orgCtx = await getUserOrganization(user.id)
+  if (!orgCtx) redirect('/login')
 
   const [members, tokens] = await Promise.all([
-    getOrgMembers(ctx.org.id),
-    getOrganizationTokens(ctx.org.id),
-  ]);
-
-  const canEdit = ctx.role === "owner" || ctx.role === "admin";
+    getOrgMembers(orgCtx.org.id),
+    getOrganizationTokens(orgCtx.org.id),
+  ])
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <PageHeading
-        eyebrow="Settings"
-        title="Organization"
-        description="Manage organization settings and Trellis connection."
+    <div className="space-y-8">
+      <PageHeading title="Organization" description="Manage your organization settings and members." />
+
+      <OrgSettingsForm
+        org={{
+          id: orgCtx.org.id,
+          name: orgCtx.org.name,
+          slug: orgCtx.org.slug,
+          trellisApiUrl: orgCtx.org.trellisApiUrl,
+          trellisApiToken: orgCtx.org.trellisApiToken,
+        }}
       />
 
-      <div className="space-y-6">
-        <OrgSettingsForm
-          orgName={ctx.org.name}
-          trellisApiUrl={ctx.org.trellisApiUrl}
-          hasTrellisToken={!!ctx.org.trellisApiToken}
-          canEdit={canEdit}
-        />
+      <Separator />
 
-        <InviteTokensSection
-          tokens={tokens}
-          canEdit={canEdit}
-          currentRole={ctx.role}
-        />
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Members</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {members.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No members found.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Member</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {members.map((m) => (
+                  <TableRow key={m.membership.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          {m.userAvatar && <AvatarImage src={m.userAvatar} />}
+                          <AvatarFallback className="text-xs">
+                            {(m.userName ?? '?')[0].toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        {m.userName}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{m.userEmail}</TableCell>
+                    <TableCell>
+                      <Badge variant={m.membership.role === 'owner' ? 'default' : 'secondary'}>
+                        {m.membership.role}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
-        <Card className="p-5">
-          <h3 className="font-semibold">Members</h3>
-          <div className="mt-4 divide-y divide-border">
-            {members.map((m) => (
-              <div
-                key={m.membership.id}
-                className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
-              >
-                <div>
-                  <p className="text-sm font-medium">{m.userName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {m.userEmail}
-                  </p>
-                </div>
-                <Badge variant="outline" className="capitalize">
-                  {m.membership.role}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
+      <Separator />
+
+      <InviteTokensSection
+        tokens={tokens.map((t) => ({
+          token: {
+            id: t.token.id,
+            tokenPrefix: t.token.tokenPrefix,
+            role: t.token.role,
+            note: t.token.note,
+            usedAt: t.token.usedAt?.toISOString() ?? null,
+            expiresAt: t.token.expiresAt?.toISOString() ?? null,
+            createdAt: t.token.createdAt.toISOString(),
+          },
+          createdByName: t.createdByName,
+        }))}
+        role={orgCtx.role}
+      />
     </div>
-  );
+  )
 }
