@@ -19,7 +19,7 @@ export function ProjectTabs({ slug }: { slug: string }) {
   const base = `/projects/${slug}`
 
   return (
-    <nav className="flex gap-6 border-b">
+    <nav className="-mx-4 flex gap-1 overflow-x-auto border-b px-4 sm:mx-0 sm:px-0" aria-label="Project sections">
       {tabs.map((tab) => {
         const href = tab.href ? `${base}${tab.href}` : base
         const isActive =
@@ -31,6 +31,7 @@ export function ProjectTabs({ slug }: { slug: string }) {
           <Link
             key={tab.label}
             href={href}
+            aria-current={isActive ? 'page' : undefined}
             className={cn(
               'pb-2.5 pt-1 text-sm font-medium border-b-2 -mb-px transition-colors',
               isActive

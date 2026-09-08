@@ -23,9 +23,11 @@ export default async function DashboardLayout({
           email: user.email,
           avatarUrl: user.avatarUrl,
         }}
+        role={orgCtx.role}
+        organizationName={orgCtx.org.name}
       />
-      <main className="ml-60 min-h-screen">
-        <div className="mx-auto max-w-6xl px-8 py-8">{children}</div>
+      <main id="main-content" className="min-h-screen pt-16 lg:ml-64 lg:pt-0">
+        <div className="mx-auto max-w-[100rem] px-4 py-6 sm:px-6 lg:px-10 lg:py-9">{children}</div>
       </main>
       <Toaster />
     </div>

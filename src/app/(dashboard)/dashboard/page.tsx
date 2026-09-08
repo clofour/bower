@@ -11,6 +11,8 @@ import {
 import { PageHeading } from '@/components/page-heading'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { StatusDot } from '@/components/status'
+import { EmptyState } from '@/components/ui/empty-state'
+import { CreateProjectDialog } from '@/components/create-project-dialog'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -20,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { FolderKanban, Box, Rocket, Globe, ArrowRight } from 'lucide-react'
+import { FolderKanban, ArrowRight } from 'lucide-react'
 
 export default async function DashboardPage() {
   const user = await getCurrentUser()
@@ -56,60 +58,17 @@ export default async function DashboardPage() {
   ).size
 
   const recentProjects = projectList.slice(0, 6)
+  const activeDeployments = allDeployments.filter((row) => ['pending', 'planning', 'deploying'].includes(row.deployment.status)).length
+  const failedDeployments = allDeployments.filter((row) => ['failed', 'rolled_back'].includes(row.deployment.status)).length
 
   return (
     <div className="space-y-8">
-      <PageHeading
-        title="Dashboard"
-        description={`Welcome back, ${user.name.split(' ')[0]}`}
-      />
+      <PageHeading eyebrow="Operational overview" title={`Good to see you, ${user.name.split(' ')[0]}`} description="Current service posture and recent changes across your organization." />
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total projects
-            </CardTitle>
-            <FolderKanban className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold">{projectList.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total services
-            </CardTitle>
-            <Box className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold">{totalServices}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Recent deployments
-            </CardTitle>
-            <Rocket className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold">{allDeployments.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Active environments
-            </CardTitle>
-            <Globe className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold">{totalEnvironments}</p>
-          </CardContent>
-        </Card>
+      <div className="grid overflow-hidden rounded-lg border bg-card lg:grid-cols-[1.6fr_1fr_1fr]">
+        <section className="border-b p-6 lg:border-b-0 lg:border-r" aria-labelledby="deployment-posture"><p id="deployment-posture" className="text-xs font-medium uppercase tracking-[.1em] text-muted-foreground">Deployment posture</p><div className="mt-3 flex items-baseline gap-2"><strong className="text-4xl font-semibold tabular">{activeDeployments}</strong><span className="text-sm text-muted-foreground">active</span></div><p className={`mt-3 text-sm ${failedDeployments ? 'font-medium text-destructive' : 'text-muted-foreground'}`}>{failedDeployments ? `${failedDeployments} failed deployment${failedDeployments === 1 ? '' : 's'} need attention` : 'No recent deployment failures'}</p></section>
+        <dl className="border-b p-6 lg:border-b-0 lg:border-r"><dt className="text-xs font-medium uppercase tracking-[.1em] text-muted-foreground">Services</dt><dd className="mt-3 text-2xl font-semibold tabular">{totalServices}</dd><dd className="mt-1 text-xs text-muted-foreground">Across {projectList.length} projects</dd></dl>
+        <dl className="p-6"><dt className="text-xs font-medium uppercase tracking-[.1em] text-muted-foreground">Environments</dt><dd className="mt-3 text-2xl font-semibold tabular">{totalEnvironments}</dd><dd className="mt-1 text-xs text-muted-foreground">Deployment targets</dd></dl>
       </div>
 
       {/* Recent projects */}
@@ -210,15 +169,7 @@ export default async function DashboardPage() {
 
       {/* Empty state */}
       {projectList.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-            <FolderKanban className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <h3 className="mb-1 text-sm font-medium">No projects yet</h3>
-          <p className="text-sm text-muted-foreground">
-            Create your first project to get started.
-          </p>
-        </div>
+        <EmptyState icon={<FolderKanban className="h-5 w-5" />} title="Create your first project" description="Projects group services, environments, routes, and deployment history into one operational workspace." action={<CreateProjectDialog prominent />} />
       )}
     </div>
   )

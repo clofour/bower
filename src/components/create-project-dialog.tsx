@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Plus } from 'lucide-react'
 
-export function CreateProjectDialog() {
+export function CreateProjectDialog({ prominent = false }: { prominent?: boolean }) {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -19,9 +19,12 @@ export function CreateProjectDialog() {
     setError(null)
     setLoading(true)
     const formData = new FormData(e.currentTarget)
-    const result = await createProjectAction(formData)
-    if (result?.error) {
-      setError(result.error)
+    try {
+      const result = await createProjectAction(formData)
+      if (result?.error) setError(result.error)
+    } catch {
+      setError('The project could not be created. Check your connection and try again.')
+    } finally {
       setLoading(false)
     }
   }
@@ -29,7 +32,7 @@ export function CreateProjectDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button size={prominent ? 'default' : 'sm'} variant={prominent ? 'default' : 'outline'}>
           <Plus className="mr-1.5 h-4 w-4" />
           New project
         </Button>
@@ -40,7 +43,7 @@ export function CreateProjectDialog() {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
+            <div role="alert" className="rounded-md border border-destructive/25 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
           )}
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
@@ -55,7 +58,7 @@ export function CreateProjectDialog() {
             <Input id="registryUrl" name="registryUrl" placeholder="registry.example.com" />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Creating...' : 'Create project'}
+            {loading ? 'Creating project…' : 'Create project'}
           </Button>
         </form>
       </DialogContent>
