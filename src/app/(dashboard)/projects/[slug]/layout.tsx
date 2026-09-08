@@ -1,35 +1,5 @@
-import { redirect, notFound } from 'next/navigation'
-import { getCurrentUser } from '@/lib/auth'
-import { getUserOrganization, getProjectBySlug } from '@/lib/queries'
-import { PageHeading } from '@/components/page-heading'
-import { ProjectTabs } from '@/components/project-tabs'
-
-export default async function ProjectLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode
-  params: Promise<{ slug: string }>
-}) {
-  const user = await getCurrentUser()
-  if (!user) redirect('/login')
-
-  const ctx = await getUserOrganization(user.id)
-  if (!ctx) redirect('/login')
-
-  const { slug } = await params
-  const project = await getProjectBySlug(ctx.org.id, slug)
-  if (!project) notFound()
-
-  return (
-    <div className="space-y-6">
-      <PageHeading
-        eyebrow="Project"
-        title={project.name}
-        description={project.description ?? undefined}
-      />
-      <ProjectTabs slug={slug} />
-      <div>{children}</div>
-    </div>
-  )
-}
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { requireContext } from '@/lib/actions/shared'
+import { getProjectBySlug } from '@/lib/queries'
+export default async function ProjectLayout({children,params}:{children:React.ReactNode;params:Promise<{slug:string}>}){const {slug}=await params;const c=await requireContext();const p=await getProjectBySlug(c.org.id,slug);if(!p)notFound();const tabs=[['Overview',''],['Deployments','deployments'],['Environments','environments'],['Routes','routes'],['Secrets','secrets'],['Integrations','integrations'],['Settings','settings']];return <><div className="crumbs"><Link href="/projects">Projects</Link><span>/</span><span>{p.name}</span></div><div className="project-nav">{tabs.map(([n,s])=><Link key={n} href={`/projects/${slug}${s?`/${s}`:''}`}>{n}</Link>)}</div>{children}</>}
