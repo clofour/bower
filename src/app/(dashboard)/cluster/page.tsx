@@ -12,7 +12,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Card } from '@/components/ui/card'
-import { EmptyState } from '@/components/ui/empty-state'
 import { StatusDot } from '@/components/status'
 import { Badge } from '@/components/ui/badge'
 import { Server } from 'lucide-react'
@@ -53,17 +52,30 @@ export default async function ClusterPage() {
   return (
     <div className="space-y-6">
       <PageHeading
-        eyebrow="Trellis"
-        title="Cluster nodes"
-        description={nodes.length ? `${nodes.length} registered node${nodes.length === 1 ? '' : 's'}. Capacity and scheduling state update when this route refreshes.` : 'Readiness, capacity, and scheduling state for Trellis nodes.'}
+        title="Cluster"
+        description="Trellis cluster node overview"
       />
 
       {error ? (
-        <div role="alert"><EmptyState icon={<Server className="h-5 w-5" />} title="Cluster connection unavailable" description={`${error} Check the Trellis API connection in organization settings, then reload this page.`} /></div>
+        <Card className="flex flex-col items-center justify-center py-16">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <Server className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h3 className="mb-1 text-sm font-medium">Unable to reach cluster</h3>
+          <p className="max-w-md text-center text-sm text-muted-foreground">{error}</p>
+        </Card>
       ) : nodes.length === 0 ? (
-        <EmptyState icon={<Server className="h-5 w-5" />} title="No cluster nodes" description="Register a Trellis node before scheduling workloads. Nodes will appear here once they connect." />
+        <Card className="flex flex-col items-center justify-center py-16">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <Server className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h3 className="mb-1 text-sm font-medium">No nodes</h3>
+          <p className="text-sm text-muted-foreground">
+            No nodes are registered with the Trellis cluster.
+          </p>
+        </Card>
       ) : (
-        <Card className="overflow-hidden">
+        <Card>
           <Table>
             <TableHeader>
               <TableRow>

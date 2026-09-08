@@ -25,10 +25,9 @@ export function StatusDot({ status, className }: { status: string; className?: s
   const color = statusColors[status] ?? 'bg-muted-foreground'
   const pulse = ['deploying', 'pending', 'planning', 'starting', 'placed', 'draining'].includes(status)
 
-  const symbol = ['healthy', 'running'].includes(status) ? '✓' : ['failed', 'rolled_back', 'lost', 'unhealthy', 'error'].includes(status) ? '!' : pulse ? '↻' : '•'
   return (
-    <span className={cn('inline-flex items-center gap-1.5', className)} aria-label={`Status: ${status.replace(/_/g, ' ')}`}>
-      <span aria-hidden="true" className={cn('inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white', color, pulse && 'animate-pulse')}>{symbol}</span>
+    <span className={cn('inline-flex items-center gap-1.5', className)}>
+      <span className={cn('inline-block h-2 w-2 rounded-full', color, pulse && 'animate-pulse')} />
       <span className="text-sm capitalize">{status.replace(/_/g, ' ')}</span>
     </span>
   )

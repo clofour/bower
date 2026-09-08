@@ -5,6 +5,7 @@ import {
   getProjectBySlug,
   getEnvironmentsByProject,
 } from '@/lib/queries'
+import { toggleEnvironmentLockAction } from '@/lib/actions/operations'
 import {
   Table,
   TableHeader,
@@ -14,9 +15,9 @@ import {
   TableCell,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Lock, Unlock, Layers } from 'lucide-react'
-import { EmptyState } from '@/components/ui/empty-state'
-import { CreateEnvironmentDialog, EnvironmentActions } from './environment-actions'
 
 export default async function EnvironmentsPage({
   params,
@@ -36,17 +37,25 @@ export default async function EnvironmentsPage({
   const environments = await getEnvironmentsByProject(project.id)
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-end justify-between gap-4"><div><h2 className="text-base font-semibold">Promotion path</h2><p className="mt-1 text-sm text-muted-foreground">Lower order environments promote first. Locked targets reject deployments and configuration changes.</p></div>{environments.length > 0 && <CreateEnvironmentDialog projectId={project.id} />}</div>
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold">Environments</h2>
 
       {environments.length === 0 ? (
-        <EmptyState icon={<Layers className="h-5 w-5" />} title="Create a deployment environment" description="Define the first namespace, replica defaults, resource tier, and variables for this project." action={<CreateEnvironmentDialog projectId={project.id} prominent />} />
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Layers className="h-10 w-10 text-muted-foreground mb-3" />
+            <h3 className="font-medium text-lg">No environments</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Create an environment to begin configuring deployments.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Namespace</TableHead>
+              <TableHead>Slug</TableHead>
               <TableHead>Resource Tier</TableHead>
               <TableHead>Default Replicas</TableHead>
               <TableHead>Promotion Order</TableHead>
@@ -59,7 +68,7 @@ export default async function EnvironmentsPage({
               <TableRow key={env.id}>
                 <TableCell className="font-medium">{env.name}</TableCell>
                 <TableCell className="font-mono text-xs text-muted-foreground">
-                  {env.trellisNamespace}
+                  {env.slug}
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary">{env.resourceTier}</Badge>
@@ -80,7 +89,28 @@ export default async function EnvironmentsPage({
                   )}
                 </TableCell>
                 <TableCell className="text-right">
-                  <EnvironmentActions projectId={project.id} environment={env} />
+                  <form
+                    action={toggleEnvironmentLockAction.bind(
+                      null,
+                      project.id,
+                      env.id,
+                      !env.isLocked
+                    )}
+                  >
+                    <Button variant="ghost" size="sm" type="submit">
+                      {env.isLocked ? (
+                        <>
+                          <Unlock className="h-3.5 w-3.5 mr-1" />
+                          Unlock
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="h-3.5 w-3.5 mr-1" />
+                          Lock
+                        </>
+                      )}
+                    </Button>
+                  </form>
                 </TableCell>
               </TableRow>
             ))}

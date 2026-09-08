@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getCurrentUser } from '@/lib/auth'
-import { getUserOrganization, getProjectBySlug, getServiceBySlug, getServiceConfigsWithEnvironments, getDeploymentsByService } from '@/lib/queries'
+import { getUserOrganization, getProjectBySlug, getServiceBySlug, getServiceConfigsWithEnvironments, getDeploymentsByService, getSidecars } from '@/lib/queries'
 import { PageHeading } from '@/components/page-heading'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator'
 import { StatusDot } from '@/components/status'
 import { DeploymentPoller } from '@/components/deployment-poller'
 import { ServiceActions } from './service-actions'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Box, Clock } from 'lucide-react'
 
 export default async function ServiceDetailPage({ params }: { params: Promise<{ slug: string; serviceSlug: string }> }) {
   const { slug, serviceSlug } = await params
