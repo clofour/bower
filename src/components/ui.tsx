@@ -1,0 +1,3 @@
+export function Empty({ title, children }: { title: string; children: React.ReactNode }) { return <div className="empty"><strong>{title}</strong>{children}</div> }
+export function Status({ value }: { value: string }) { const warn = ['failed','unhealthy','degraded','locked'].includes(value); return <span className="status"><i className={`dot ${warn ? 'warn':''}`} />{value.replaceAll('_',' ')}</span> }
+export function DateText({ value }: { value: Date | string | null }) { return <span>{value ? new Intl.DateTimeFormat('en',{dateStyle:'medium',timeStyle:'short'}).format(new Date(value)) : '—'}</span> }
