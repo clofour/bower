@@ -1,2 +1,27 @@
-import { notFound } from 'next/navigation';import { requireContext } from '@/lib/actions/shared';import { getProjectBySlug } from '@/lib/queries';import { PageHeading } from '@/components/page-heading'
-export default async function Page({params}:{params:Promise<{slug:string}>}){const {slug}=await params,c=await requireContext(),p=await getProjectBySlug(c.org.id,slug);if(!p)notFound();return <><PageHeading eyebrow="Project configuration" title="Settings" description="Stable identifiers and registry defaults for this project."/><div className="grid grid-2"><div className="card"><h2>Project details</h2><div className="form"><div className="field"><label>Name</label><input className="input" value={p.name} readOnly/></div><div className="field"><label>Slug</label><input className="input mono" value={p.slug} readOnly/></div><div className="field"><label>Registry</label><input className="input mono" value={p.registryUrl||'Not configured'} readOnly/></div></div></div><div className="card" style={{borderColor:'#efc8c4'}}><h2>Danger zone</h2><p>Deleting a project removes its service configuration, history, routes, and secret references.</p><button className="btn" disabled>Delete project</button></div></div></>}
+import { redirect, notFound } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth'
+import { getUserOrganization, getProjectBySlug } from '@/lib/queries'
+import { ProjectSettingsForm } from './project-settings-form'
+
+export default async function ProjectSettingsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+  const orgCtx = await getUserOrganization(user.id)
+  if (!orgCtx) redirect('/login')
+  const project = await getProjectBySlug(orgCtx.org.id, slug)
+  if (!project) notFound()
+
+  return (
+    <ProjectSettingsForm
+      project={{
+        id: project.id,
+        name: project.name,
+        slug: project.slug,
+        description: project.description,
+        registryUrl: project.registryUrl,
+        createdAt: project.createdAt.toISOString(),
+      }}
+    />
+  )
+}

@@ -1,2 +1,142 @@
-import Link from 'next/link';import { notFound } from 'next/navigation';import { requireContext } from '@/lib/actions/shared';import { getProjectBySlug,getServiceBySlug } from '@/lib/queries';import { getTrellisClient } from '@/lib/trellis-instance';import { PageHeading } from '@/components/page-heading';import { Status } from '@/components/ui'
-export default async function Page({params}:{params:Promise<{slug:string;serviceSlug:string;allocationId:string}>}){const x=await params,c=await requireContext(),p=await getProjectBySlug(c.org.id,x.slug);if(!p)notFound();const s=await getServiceBySlug(p.id,x.serviceSlug);if(!s)notFound();let allocation:import('@/types/trellis').TrellisAllocation|undefined;try{const rows=await (await getTrellisClient(c.org.id)).listAllocations();allocation=rows.find(a=>a.id===x.allocationId)}catch{}if(!allocation)notFound();return <><div className="crumbs"><Link href={`/projects/${x.slug}/services/${x.serviceSlug}`}>{s.name}</Link><span>/</span><span>Allocation</span></div><PageHeading eyebrow="Runtime instance" title={allocation.id.slice(0,12)} description="Live scheduler placement and health for this allocation."/><div className="grid grid-3"><div className="card"><div className="metric-label">Phase</div><div style={{marginTop:14}}><Status value={allocation.phase}/></div></div><div className="card"><div className="metric-label">Node</div><div style={{marginTop:14}} className="mono">{allocation.node_id||'Pending'}</div></div><div className="card"><div className="metric-label">Health</div><div style={{marginTop:14}}><Status value={allocation.health||'unknown'}/></div></div></div></>}
+import { redirect, notFound } from 'next/navigation'
+import Link from 'next/link'
+import { getCurrentUser } from '@/lib/auth'
+import { getUserOrganization, getProjectBySlug, getServiceBySlug, getServiceConfigsWithEnvironments } from '@/lib/queries'
+import { getTrellisClient } from '@/lib/trellis-instance'
+import { PageHeading } from '@/components/page-heading'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { StatusDot } from '@/components/status'
+import { ExecDialog } from '@/components/exec-dialog'
+import { ArrowLeft } from 'lucide-react'
+import type { TrellisAllocation } from '@/types/trellis'
+
+export default async function AllocationDetailPage({
+  params,
+}: {
+  params: Promise<{ slug: string; serviceSlug: string; allocationId: string }>
+}) {
+  const { slug, serviceSlug, allocationId } = await params
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+  const orgCtx = await getUserOrganization(user.id)
+  if (!orgCtx) redirect('/login')
+  const project = await getProjectBySlug(orgCtx.org.id, slug)
+  if (!project) notFound()
+  const service = await getServiceBySlug(project.id, serviceSlug)
+  if (!service) notFound()
+
+  const configs = await getServiceConfigsWithEnvironments(service.id)
+  const firstConfig = configs[0]
+
+  const client = await getTrellisClient(orgCtx.org.id)
+  let allocation: TrellisAllocation | null = null
+  let stdout = ''
+  let stderr = ''
+
+  try {
+    const allocs = await client.listAllocations()
+    allocation = allocs.find((a) => a.id === allocationId) ?? null
+    if (!allocation) notFound()
+    const [outRes, errRes] = await Promise.all([
+      client.getAllocationLogs(allocationId, 'stdout').catch(() => ''),
+      client.getAllocationLogs(allocationId, 'stderr').catch(() => ''),
+    ])
+    stdout = outRes
+    stderr = errRes
+  } catch {
+    notFound()
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Link href={`/projects/${slug}/services/${serviceSlug}`} className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
+        <PageHeading
+          title={allocationId.slice(0, 8)}
+          eyebrow={service.name}
+          actions={
+            firstConfig && (
+              <ExecDialog allocationId={allocationId} serviceConfigId={firstConfig.config.id} />
+            )
+          }
+        />
+      </div>
+
+      {allocation && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Allocation details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm md:grid-cols-3">
+              <div>
+                <span className="text-muted-foreground">Phase</span>
+                <div className="mt-0.5"><StatusDot status={allocation.phase} /></div>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Health</span>
+                <div className="mt-0.5"><StatusDot status={allocation.health} /></div>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Group</span>
+                <p className="mt-0.5 font-mono text-xs">{allocation.group}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Job</span>
+                <p className="mt-0.5 font-mono text-xs">{allocation.job}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Node</span>
+                <p className="mt-0.5 font-mono text-xs">{allocation.node_id}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Revision</span>
+                <p className="mt-0.5">{allocation.job_revision}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Attempt</span>
+                <p className="mt-0.5">{allocation.attempt}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Created</span>
+                <p className="mt-0.5 text-xs">{new Date(allocation.created_at).toLocaleString()}</p>
+              </div>
+              {allocation.draining && (
+                <div>
+                  <Badge variant="warning">Draining</Badge>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Logs</h3>
+        <div className="space-y-3">
+          <div>
+            <div className="mb-1 flex items-center gap-2">
+              <Badge variant="secondary">stdout</Badge>
+            </div>
+            <pre className="max-h-96 overflow-auto rounded-md bg-muted p-4 font-mono text-xs leading-relaxed">
+              {stdout || 'No output'}
+            </pre>
+          </div>
+          {stderr && (
+            <div>
+              <div className="mb-1 flex items-center gap-2">
+                <Badge variant="destructive">stderr</Badge>
+              </div>
+              <pre className="max-h-96 overflow-auto rounded-md bg-destructive/5 p-4 font-mono text-xs leading-relaxed text-destructive">
+                {stderr}
+              </pre>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

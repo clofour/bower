@@ -1,2 +1,41 @@
-import { requireContext } from '@/lib/actions/shared';import { getApiKeys,getOrganizationTokens } from '@/lib/queries';import { PageHeading } from '@/components/page-heading';import { DateText,Empty } from '@/components/ui'
-export default async function Page(){const c=await requireContext();const [keys,tokens]=await Promise.all([getApiKeys(c.user.id),getOrganizationTokens(c.org.id)]);return <><PageHeading eyebrow="Personal settings" title="Account" description="Your identity and credentials for Bower automation."/><div className="grid grid-2"><div className="card"><h2>Profile</h2><div className="form"><div className="field"><label>Name</label><input className="input" value={c.user.name} readOnly/></div><div className="field"><label>Email</label><input className="input" value={c.user.email} readOnly/></div></div></div><div className="card"><h2>API keys</h2>{keys.map(k=><div className="list-card" key={k.id}><div><h3>{k.name}</h3><p className="mono">{k.keyPrefix}••••</p></div><DateText value={k.lastUsedAt}/></div>)}{!keys.length&&<Empty title="No API keys">Create one when an external tool needs Bower access.</Empty>}</div></div><section className="section"><div className="section-head"><h2>Workspace invitations</h2></div><div className="table-wrap">{tokens.length?<table><thead><tr><th>Token</th><th>Role</th><th>Created by</th><th>Status</th></tr></thead><tbody>{tokens.map(({token:t,createdByName})=><tr key={t.id}><td className="mono">{t.tokenPrefix}••••</td><td>{t.role}</td><td>{createdByName||'System'}</td><td>{t.usedAt?'Used':t.expiresAt&&t.expiresAt<new Date()?'Expired':'Available'}</td></tr>)}</tbody></table>:<Empty title="No active invitations">Workspace invitations will appear here.</Empty>}</div></section></>}
+import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth'
+import { getApiKeys } from '@/lib/queries'
+import { PageHeading } from '@/components/page-heading'
+import { Separator } from '@/components/ui/separator'
+import { AccountSettingsForm } from '@/components/account-settings-form'
+import { ChangePasswordForm } from './change-password-form'
+import { ApiKeysSection } from './api-keys-section'
+
+export default async function AccountSettingsPage() {
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+
+  const apiKeysList = await getApiKeys(user.id)
+
+  return (
+    <div className="space-y-8">
+      <PageHeading title="Account" description="Manage your profile and API keys." />
+
+      <AccountSettingsForm
+        user={{ name: user.name, email: user.email, avatarUrl: user.avatarUrl }}
+      />
+
+      <Separator />
+
+      <ChangePasswordForm />
+
+      <Separator />
+
+      <ApiKeysSection
+        keys={apiKeysList.map((k) => ({
+          id: k.id,
+          name: k.name,
+          keyPrefix: k.keyPrefix,
+          lastUsedAt: k.lastUsedAt?.toISOString() ?? null,
+          createdAt: k.createdAt.toISOString(),
+        }))}
+      />
+    </div>
+  )
+}
