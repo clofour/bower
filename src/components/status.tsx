@@ -1,30 +1,34 @@
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils'
 
-const palette: Record<string, string> = {
-  healthy: "bg-emerald-500",
-  running: "bg-emerald-500",
-  ready: "bg-emerald-500",
-  deploying: "bg-blue-500 animate-pulse",
-  planning: "bg-blue-500 animate-pulse",
-  pending: "bg-amber-500 animate-pulse",
-  failed: "bg-red-500",
-  lost: "bg-red-500",
-  unhealthy: "bg-red-500",
-  rolled_back: "bg-zinc-400 dark:bg-zinc-500",
-  stopped: "bg-zinc-400 dark:bg-zinc-500",
-  unknown: "bg-zinc-400 dark:bg-zinc-500",
-};
+const statusColors: Record<string, string> = {
+  healthy: 'bg-success',
+  running: 'bg-success',
+  deploying: 'bg-warning',
+  pending: 'bg-warning',
+  planning: 'bg-warning',
+  starting: 'bg-warning',
+  placed: 'bg-warning',
+  stopping: 'bg-muted-foreground',
+  stopped: 'bg-muted-foreground',
+  completed: 'bg-muted-foreground',
+  dead: 'bg-muted-foreground',
+  draining: 'bg-warning',
+  failed: 'bg-destructive',
+  rolled_back: 'bg-destructive',
+  lost: 'bg-destructive',
+  unhealthy: 'bg-destructive',
+  unknown: 'bg-muted-foreground',
+  error: 'bg-destructive',
+}
 
-export function Status({ value }: { value: string }) {
+export function StatusDot({ status, className }: { status: string; className?: string }) {
+  const color = statusColors[status] ?? 'bg-muted-foreground'
+  const pulse = ['deploying', 'pending', 'planning', 'starting', 'placed', 'draining'].includes(status)
+
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-      <span
-        className={cn(
-          "inline-block h-1.5 w-1.5 rounded-full",
-          palette[value] ?? palette.unknown
-        )}
-      />
-      {value.replace("_", " ")}
+    <span className={cn('inline-flex items-center gap-1.5', className)}>
+      <span className={cn('inline-block h-2 w-2 rounded-full', color, pulse && 'animate-pulse')} />
+      <span className="text-sm capitalize">{status.replace(/_/g, ' ')}</span>
     </span>
-  );
+  )
 }

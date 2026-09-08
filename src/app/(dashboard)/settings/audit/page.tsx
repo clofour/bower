@@ -1,66 +1,65 @@
-import { redirect } from "next/navigation";
-import { ScrollText } from "lucide-react";
-import { getCurrentUser } from "@/lib/auth";
-import { getAuditLog, getUserOrganization } from "@/lib/queries";
-import { Card } from "@/components/ui/card";
-import { PageHeading } from "@/components/page-heading";
+import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth'
+import { getUserOrganization, getAuditLog } from '@/lib/queries'
+import { PageHeading } from '@/components/page-heading'
+import { Card, CardContent } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { ScrollText } from 'lucide-react'
 
-export default async function AuditPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  const ctx = await getUserOrganization(user.id);
-  if (!ctx) redirect("/login");
-  const entries = await getAuditLog(ctx.org.id, 100);
+export default async function AuditLogPage() {
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
+  const orgCtx = await getUserOrganization(user.id)
+  if (!orgCtx) redirect('/login')
+
+  const entries = await getAuditLog(orgCtx.org.id)
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <PageHeading
-        eyebrow="Organization"
-        title="Audit log"
-        description="An append-only trail of configuration and deployment changes."
-      />
+    <div className="space-y-6">
+      <PageHeading title="Audit Log" description="Track changes across your organization." />
 
-      <Card className="overflow-hidden">
-        {entries.length === 0 ? (
-          <div className="grid place-items-center py-20 text-center">
-            <div>
-              <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-primary/10">
-                <ScrollText className="h-5 w-5 text-primary" />
-              </span>
-              <h3 className="mt-4 font-semibold">No activity yet</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Activity will appear as your team changes Bower.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="divide-y">
-            {entries.map(({ entry, userName }) => (
-              <div
-                key={entry.id}
-                className="grid gap-2 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_auto]"
-              >
-                <div>
-                  <p className="text-sm">
-                    <span className="font-medium">
-                      {userName ?? "System"}
-                    </span>{" "}
-                    <span className="text-muted-foreground">
-                      {entry.action.replaceAll(".", " ")}
-                    </span>
-                  </p>
-                  <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-                    {entry.resourceType} / {entry.resourceId}
-                  </p>
-                </div>
-                <time className="text-xs text-muted-foreground">
-                  {new Date(entry.createdAt).toLocaleString()}
-                </time>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
+      {entries.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <ScrollText className="h-10 w-10 text-muted-foreground/50" />
+            <p className="text-muted-foreground">No audit entries yet.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Time</TableHead>
+                <TableHead>User</TableHead>
+                <TableHead>Action</TableHead>
+                <TableHead>Resource</TableHead>
+                <TableHead>Resource ID</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {entries.map((e) => (
+                <TableRow key={e.entry.id}>
+                  <TableCell className="whitespace-nowrap text-muted-foreground">
+                    {new Date(e.entry.createdAt).toLocaleString()}
+                  </TableCell>
+                  <TableCell>{e.userName ?? 'System'}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="font-mono text-xs">
+                      {e.entry.action}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="capitalize">{e.entry.resourceType}</TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {e.entry.resourceId.slice(0, 8)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
-  );
+  )
 }

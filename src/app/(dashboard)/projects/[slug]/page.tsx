@@ -1,177 +1,91 @@
-import { redirect, notFound } from "next/navigation";
-import { Layers, ArrowRight, Boxes } from "lucide-react";
-import Link from "next/link";
-import { getCurrentUser } from "@/lib/auth";
-import {
-  getUserOrganization,
-  getProjectBySlug,
-  getServicesByProject,
-  getTemplates,
-  getEnvironmentsByProject,
-  getServiceConfigsWithEnvironments,
-} from "@/lib/queries";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { CreateServiceDialog } from "@/components/create-service-dialog";
-import { BUILTIN_TEMPLATES } from "@/lib/builtin-templates";
-import { getTrellisClient } from "@/lib/trellis-instance";
-import { Status } from "@/components/status";
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth'
+import { getUserOrganization, getProjectBySlug, getServicesByProject } from '@/lib/queries'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Plus, Server, Cpu, Clock, Box } from 'lucide-react'
+import { CreateServiceDialog } from '@/components/create-service-dialog'
 
-const typeColors: Record<string, string> = {
-  web: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  worker: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  cron: "bg-violet-500/10 text-violet-700 dark:text-violet-400",
-  custom: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400",
-};
+const typeIcons: Record<string, React.ReactNode> = {
+  web: <Server className="h-4 w-4" />,
+  worker: <Cpu className="h-4 w-4" />,
+  cron: <Clock className="h-4 w-4" />,
+  custom: <Box className="h-4 w-4" />,
+}
 
-export default async function ProjectServicesPage({
+const typeVariants: Record<string, 'default' | 'secondary' | 'outline'> = {
+  web: 'default',
+  worker: 'secondary',
+  cron: 'outline',
+  custom: 'outline',
+}
+
+export default async function ProjectOverviewPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string }>
 }) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
 
-  const ctx = await getUserOrganization(user.id);
-  if (!ctx) redirect("/login");
+  const ctx = await getUserOrganization(user.id)
+  if (!ctx) redirect('/login')
 
-  const { slug } = await params;
-  const project = await getProjectBySlug(ctx.org.id, slug);
-  if (!project) notFound();
+  const { slug } = await params
+  const project = await getProjectBySlug(ctx.org.id, slug)
+  if (!project) redirect('/projects')
 
-  const [serviceList, customTemplates, environments] = await Promise.all([
-    getServicesByProject(project.id),
-    getTemplates(ctx.org.id),
-    getEnvironmentsByProject(project.id),
-  ]);
-  const templates = [
-    ...BUILTIN_TEMPLATES,
-    ...customTemplates.map((template) => ({
-      name: template.name,
-      type: template.type,
-      config: template.config as Record<string, unknown>,
-    })),
-  ];
-  const health = new Map<string, string>();
-  if (ctx.org.trellisApiUrl && ctx.org.trellisApiToken) {
-    const client = await getTrellisClient(ctx.org.id);
-    await Promise.all(
-      serviceList.map(async (service) => {
-        const configs = await getServiceConfigsWithEnvironments(service.id);
-        await Promise.all(
-          configs.map(async ({ config, environment }) => {
-            try {
-              const allocations = await client.listAllocations({
-                namespace: environment.trellisNamespace,
-                job: config.activeJobName || service.slug,
-              });
-              const revision = allocations.length
-                ? Math.max(...allocations.map((item) => item.job_revision))
-                : 0;
-              const current = allocations.filter(
-                (item) =>
-                  item.job_revision === revision && item.phase !== "stopped"
-              );
-              const value =
-                current.length === 0
-                  ? "pending"
-                  : current.some(
-                        (item) =>
-                          item.phase === "failed" ||
-                          item.phase === "lost" ||
-                          item.health === "unhealthy"
-                      )
-                    ? "failed"
-                    : current.every(
-                          (item) =>
-                            item.phase === "running" &&
-                            item.health === "healthy"
-                        )
-                      ? "healthy"
-                      : "deploying";
-              health.set(`${service.id}:${environment.id}`, value);
-            } catch {
-              health.set(`${service.id}:${environment.id}`, "unknown");
-            }
-          })
-        );
-      })
-    );
-  }
+  const services = await getServicesByProject(project.id)
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Services</h2>
-        <CreateServiceDialog projectSlug={slug} templates={templates} />
+        <CreateServiceDialog projectSlug={slug} />
       </div>
 
-      {serviceList.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center py-16">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-            <Layers className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <h3 className="mt-4 text-lg font-semibold">No services yet</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Add a service to start deploying.
-          </p>
-          <div className="mt-4">
-            <CreateServiceDialog projectSlug={slug} templates={templates} />
-          </div>
+      {services.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Server className="h-10 w-10 text-muted-foreground mb-3" />
+            <h3 className="font-medium text-lg">No services yet</h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+              Create your first service to start deploying containers with Trellis.
+            </p>
+          </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {serviceList.map((svc) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {services.map((service) => (
             <Link
-              key={svc.id}
-              href={`/projects/${slug}/services/${svc.slug}`}
+              key={service.id}
+              href={`/projects/${slug}/services/${service.slug}`}
+              className="block"
             >
-              <Card className="group overflow-hidden p-0 transition-all hover:border-primary/30 hover:shadow-md hover:shadow-primary/5">
-                <div className="h-0.5 bg-gradient-to-r from-primary/40 via-primary/20 to-transparent" />
-                <div className="flex items-center justify-between p-5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                      <Boxes className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium">{svc.name}</h3>
-                        <Badge
-                          variant="secondary"
-                          className={`text-[10px] ${typeColors[svc.type] ?? typeColors.custom}`}
-                        >
-                          {svc.type}
-                        </Badge>
-                      </div>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {svc.slug}
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {environments.map((environment) => (
-                          <span
-                            key={environment.id}
-                            className="flex items-center gap-1 text-[11px] text-muted-foreground"
-                          >
-                            {environment.name}
-                            <Status
-                              value={
-                                health.get(
-                                  `${svc.id}:${environment.id}`
-                                ) ?? "pending"
-                              }
-                            />
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+              <Card className="hover:border-primary/50 transition-colors">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">{service.name}</CardTitle>
+                    <Badge variant={typeVariants[service.type] ?? 'outline'}>
+                      <span className="flex items-center gap-1.5">
+                        {typeIcons[service.type]}
+                        {service.type}
+                      </span>
+                    </Badge>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
-                </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground">
+                    Created {new Date(service.createdAt).toLocaleDateString()}
+                  </p>
+                </CardContent>
               </Card>
             </Link>
           ))}
         </div>
       )}
     </div>
-  );
+  )
 }

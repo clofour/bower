@@ -1,213 +1,119 @@
-import { redirect, notFound } from "next/navigation";
-import { Rocket } from "lucide-react";
-import { getCurrentUser } from "@/lib/auth";
+import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth'
+import { getUserOrganization, getProjectBySlug, getDeploymentsByProject } from '@/lib/queries'
 import {
-  getUserOrganization,
-  getProjectBySlug,
-  getDeploymentsByProject,
-  getDeploymentEvents,
-} from "@/lib/queries";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { DeploymentPoller } from "@/components/deployment-poller";
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { StatusDot } from '@/components/status'
+import { DeploymentPoller } from '@/components/deployment-poller'
+import { Rocket } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 
-const statusVariant: Record<string, string> = {
-  pending:
-    "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-  planning:
-    "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
-  deploying:
-    "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
-  healthy:
-    "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-  failed: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-  rolled_back:
-    "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20",
-};
+const activeStatuses = ['pending', 'planning', 'deploying']
+
+function formatTime(date: Date | string | null): string {
+  if (!date) return '-'
+  const d = new Date(date)
+  return d.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function imageShort(image: string | null): string {
+  if (!image) return '-'
+  const parts = image.split('/')
+  const last = parts[parts.length - 1]
+  if (last.length > 40) return last.slice(0, 37) + '...'
+  return last
+}
 
 export default async function DeploymentsPage({
   params,
-  searchParams,
 }: {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<{
-    environment?: string;
-    service?: string;
-    user?: string;
-    status?: string;
-  }>;
+  params: Promise<{ slug: string }>
 }) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  const user = await getCurrentUser()
+  if (!user) redirect('/login')
 
-  const ctx = await getUserOrganization(user.id);
-  if (!ctx) redirect("/login");
+  const ctx = await getUserOrganization(user.id)
+  if (!ctx) redirect('/login')
 
-  const { slug } = await params;
-  const project = await getProjectBySlug(ctx.org.id, slug);
-  if (!project) notFound();
+  const { slug } = await params
+  const project = await getProjectBySlug(ctx.org.id, slug)
+  if (!project) redirect('/projects')
 
-  const deploymentList = await getDeploymentsByProject(project.id);
-  const filters = await searchParams;
-  const filtered = deploymentList.filter(
-    (item) =>
-      (!filters.environment ||
-        item.environmentName === filters.environment) &&
-      (!filters.service || item.serviceName === filters.service) &&
-      (!filters.user ||
-        (item.userName || "Automation") === filters.user) &&
-      (!filters.status || item.deployment.status === filters.status)
-  );
-  const events = await getDeploymentEvents(
-    filtered.map((item) => item.deployment.id)
-  );
+  const rows = await getDeploymentsByProject(project.id)
+  const hasActive = rows.some((r) =>
+    activeStatuses.includes(r.deployment.status)
+  )
 
   return (
-    <div>
-      <DeploymentPoller
-        active={deploymentList.some((item) =>
-          ["pending", "planning", "deploying"].includes(
-            item.deployment.status
-          )
-        )}
-      />
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold">Deployments</h2>
-        <p className="text-sm text-muted-foreground">
-          History of all deployments across services and environments.
-        </p>
-      </div>
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold">Deployment History</h2>
 
-      <form className="mb-5 grid gap-2 rounded-xl border bg-muted/30 p-3 sm:grid-cols-4">
-        <input
-          name="environment"
-          defaultValue={filters.environment ?? ""}
-          placeholder="Environment"
-          className="h-9 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground"
-        />
-        <input
-          name="service"
-          defaultValue={filters.service ?? ""}
-          placeholder="Service"
-          className="h-9 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground"
-        />
-        <input
-          name="user"
-          defaultValue={filters.user ?? ""}
-          placeholder="User"
-          className="h-9 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground"
-        />
-        <select
-          name="status"
-          defaultValue={filters.status ?? ""}
-          className="h-9 rounded-lg border border-input bg-background px-3 text-sm"
-        >
-          <option value="">Any status</option>
-          {Object.keys(statusVariant).map((status) => (
-            <option key={status}>{status}</option>
-          ))}
-        </select>
-        <button className="sr-only">Filter</button>
-      </form>
+      <DeploymentPoller active={hasActive} />
 
-      {filtered.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center py-16">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-            <Rocket className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <h3 className="mt-4 text-lg font-semibold">No deployments yet</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Deployments will appear here once you deploy a service.
-          </p>
+      {rows.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Rocket className="h-10 w-10 text-muted-foreground mb-3" />
+            <h3 className="font-medium text-lg">No deployments yet</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Deploy a service to see its history here.
+            </p>
+          </CardContent>
         </Card>
       ) : (
-        <div className="space-y-2">
-          {filtered.map((d) => (
-            <Card key={d.deployment.id} className="p-4">
-              <details>
-                <summary className="cursor-pointer list-none">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-medium">
-                          {d.serviceName}
-                        </h3>
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] ${statusVariant[d.deployment.status] ?? ""}`}
-                        >
-                          {d.deployment.status.replace("_", " ")}
-                        </Badge>
-                      </div>
-                      <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-                        {d.deployment.imageAfter}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {d.environmentName} &middot;{" "}
-                        {d.userName || "Automation"} &middot;{" "}
-                        {d.deployment.triggerType}
-                      </p>
-                    </div>
-                    <div className="text-right text-xs text-muted-foreground">
-                      <p>{d.deployment.strategy}</p>
-                      <p>
-                        {new Date(
-                          d.deployment.createdAt
-                        ).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </summary>
-                <div className="mt-4 grid gap-4 border-t pt-4 lg:grid-cols-2">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Semantic plan
-                    </p>
-                    <pre className="mt-2 max-h-64 overflow-auto rounded-lg bg-muted p-3 text-xs">
-                      {JSON.stringify(d.deployment.planDiff, null, 2)}
-                    </pre>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Convergence timeline
-                    </p>
-                    <div className="mt-2 space-y-2">
-                      {events
-                        .filter(
-                          (event) =>
-                            event.deploymentId === d.deployment.id
-                        )
-                        .map((event) => (
-                          <div
-                            key={event.id}
-                            className="rounded-lg border p-3 text-xs"
-                          >
-                            <p className="font-medium">
-                              {event.type.replace("_", " ")}
-                            </p>
-                            <p className="mt-1 text-muted-foreground">
-                              {event.message}
-                            </p>
-                            <time className="mt-1 block text-[10px] text-muted-foreground">
-                              {new Date(
-                                event.createdAt
-                              ).toLocaleString()}
-                            </time>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                </div>
-              </details>
-            </Card>
-          ))}
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Status</TableHead>
+              <TableHead>Service</TableHead>
+              <TableHead>Environment</TableHead>
+              <TableHead>Image</TableHead>
+              <TableHead>Triggered by</TableHead>
+              <TableHead>Strategy</TableHead>
+              <TableHead>Time</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row) => (
+              <TableRow key={row.deployment.id}>
+                <TableCell>
+                  <StatusDot status={row.deployment.status} />
+                </TableCell>
+                <TableCell className="font-medium">{row.serviceName}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{row.environmentName}</Badge>
+                </TableCell>
+                <TableCell className="font-mono text-xs">
+                  {imageShort(row.deployment.imageAfter)}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {row.userName ?? row.deployment.triggerType}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline">
+                    {row.deployment.strategy.replace(/_/g, ' ')}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-muted-foreground text-sm">
+                  {formatTime(row.deployment.createdAt)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
     </div>
-  );
+  )
 }

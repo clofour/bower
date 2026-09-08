@@ -1,36 +1,22 @@
-import type { ReactNode } from "react";
+import { cn } from '@/lib/utils'
 
-export function PageHeading({
-  eyebrow,
-  title,
-  description,
-  actions,
-}: {
-  eyebrow?: string;
-  title: string;
-  description?: string;
-  actions?: ReactNode;
-}) {
+interface PageHeadingProps {
+  eyebrow?: string
+  title: string
+  description?: string
+  actions?: React.ReactNode
+  className?: string
+}
+
+export function PageHeading({ eyebrow, title, description, actions, className }: PageHeadingProps) {
   return (
-    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        {eyebrow && (
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary">
-            {eyebrow}
-          </p>
-        )}
-        <h1
-          className={`${eyebrow ? "mt-1" : ""} text-2xl font-bold tracking-tight`}
-        >
-          {title}
-        </h1>
-        {description && (
-          <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            {description}
-          </p>
-        )}
+    <div className={cn('flex items-start justify-between gap-4', className)}>
+      <div className="space-y-1">
+        {eyebrow && <p className="text-sm font-medium text-muted-foreground">{eyebrow}</p>}
+        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        {description && <p className="text-sm text-muted-foreground">{description}</p>}
       </div>
-      {actions && <div className="flex shrink-0 gap-2">{actions}</div>}
+      {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
     </div>
-  );
+  )
 }

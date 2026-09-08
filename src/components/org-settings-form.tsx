@@ -1,73 +1,71 @@
-"use client";
+'use client'
 
-import { useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import { updateOrganizationAction } from "@/lib/actions/settings";
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { updateOrganizationAction } from '@/lib/actions/settings'
 
-export function OrgSettingsForm({
-  orgName,
-  trellisApiUrl,
-  hasTrellisToken,
-  canEdit,
-}: {
-  orgName: string;
-  trellisApiUrl: string | null;
-  hasTrellisToken: boolean;
-  canEdit: boolean;
-}) {
-  const [isPending, startTransition] = useTransition();
+interface OrgSettingsFormProps {
+  org: {
+    id: string
+    name: string
+    slug: string
+    trellisApiUrl: string
+    trellisApiToken: string
+  }
+}
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    startTransition(async () => {
-      await updateOrganizationAction(formData);
-    });
+export function OrgSettingsForm({ org }: OrgSettingsFormProps) {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    setSuccess(false)
+    const formData = new FormData(e.currentTarget)
+    const result = await updateOrganizationAction(formData)
+    if (result?.error) {
+      setError(result.error)
+    } else if (result?.success) {
+      setSuccess(true)
+      router.refresh()
+    }
+    setLoading(false)
   }
 
   return (
-    <Card className="p-5">
-      <h3 className="font-medium">Organization details</h3>
-      <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-        <div className="space-y-2">
-          <Label htmlFor="org-name">Name</Label>
-          <Input
-            id="org-name"
-            name="name"
-            defaultValue={orgName}
-            disabled={!canEdit}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="trellis-url">Trellis API URL</Label>
-          <Input
-            id="trellis-url"
-            name="trellisApiUrl"
-            defaultValue={trellisApiUrl ?? ""}
-            placeholder="https://trellis.example.com"
-            disabled={!canEdit}
-            className="font-mono"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="trellis-token">Trellis API token</Label>
-          <Input
-            id="trellis-token"
-            name="trellisApiToken"
-            type="password"
-            placeholder={hasTrellisToken ? "••••••••" : "Paste token"}
-            disabled={!canEdit}
-          />
-        </div>
-        {canEdit && (
-          <Button type="submit" disabled={isPending}>
-            {isPending ? "Saving..." : "Save"}
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Organization details</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
+          {success && <div className="rounded-md bg-success/10 p-3 text-sm text-success">Settings updated.</div>}
+          <div className="space-y-2">
+            <Label htmlFor="name">Organization name</Label>
+            <Input id="name" name="name" defaultValue={org.name} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="trellisApiUrl">Trellis API URL</Label>
+            <Input id="trellisApiUrl" name="trellisApiUrl" defaultValue={org.trellisApiUrl} placeholder="https://trellis.example.com" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="trellisApiToken">Trellis API Token</Label>
+            <Input id="trellisApiToken" name="trellisApiToken" type="password" defaultValue={org.trellisApiToken} />
+          </div>
+          <Button type="submit" disabled={loading}>
+            {loading ? 'Saving...' : 'Save changes'}
           </Button>
-        )}
-      </form>
+        </form>
+      </CardContent>
     </Card>
-  );
+  )
 }

@@ -1,76 +1,73 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Terminal } from "lucide-react";
-import type { TrellisAllocation } from "@/types/trellis";
+import { useState } from 'react'
+import { execAllocationAction } from '@/lib/actions/services'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Terminal } from 'lucide-react'
 
-export function ExecDialog({
-  serviceId,
-  allocations,
-}: {
-  serviceId: string;
-  allocations: TrellisAllocation[];
-}) {
-  const [open, setOpen] = useState(false);
+interface ExecResult {
+  exit_code: number
+  stdout: string
+  stderr: string
+}
 
-  const running = allocations.filter((a) => a.phase === "running");
+export function ExecDialog({ allocationId, serviceConfigId }: { allocationId: string; serviceConfigId: string }) {
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<ExecResult | null>(null)
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setLoading(true)
+    setResult(null)
+    const formData = new FormData(e.currentTarget)
+    const command = String(formData.get('command') ?? '').split(/\s+/).filter(Boolean)
+    const res = await execAllocationAction(serviceConfigId, allocationId, command[0], command)
+    setResult(res as ExecResult)
+    setLoading(false)
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
-          <Terminal className="mr-2 h-4 w-4" />
+        <Button variant="outline" size="sm">
+          <Terminal className="mr-1.5 h-3.5 w-3.5" />
           Exec
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Execute command</DialogTitle>
         </DialogHeader>
-        <form
-          action={`/api/trellis/exec`}
-          method="POST"
-          className="space-y-4"
-        >
-          <input type="hidden" name="serviceId" value={serviceId} />
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="exec-alloc">Allocation</Label>
-            <select
-              id="exec-alloc"
-              name="allocationId"
-              className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm font-mono"
-            >
-              {running.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.id.slice(0, 12)} ({a.address ?? "no address"})
-                </option>
-              ))}
-            </select>
+            <Label htmlFor="command">Command</Label>
+            <Input id="command" name="command" placeholder="ls -la" required className="font-mono" />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="exec-cmd">Command</Label>
-            <Input
-              id="exec-cmd"
-              name="command"
-              defaultValue="/bin/sh"
-              className="font-mono"
-            />
-          </div>
-          <Button type="submit" className="w-full">
-            Connect
+          <Button type="submit" disabled={loading}>
+            {loading ? 'Running...' : 'Run'}
           </Button>
         </form>
+        {result && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Exit code:</span>
+              <span className={result.exit_code === 0 ? 'text-success' : 'text-destructive'}>
+                {result.exit_code}
+              </span>
+            </div>
+            {result.stdout && (
+              <pre className="max-h-64 overflow-auto rounded-md bg-muted p-3 font-mono text-xs">{result.stdout}</pre>
+            )}
+            {result.stderr && (
+              <pre className="max-h-64 overflow-auto rounded-md bg-destructive/10 p-3 font-mono text-xs text-destructive">{result.stderr}</pre>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
-  );
+  )
 }

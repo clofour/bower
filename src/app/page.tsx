@@ -1,12 +1,7 @@
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth'
 
 export default async function RootPage() {
-  const user = await getCurrentUser();
-
-  if (user) {
-    redirect("/projects");
-  } else {
-    redirect("/login");
-  }
+  const user = await getCurrentUser()
+  redirect(user ? '/projects' : '/login')
 }

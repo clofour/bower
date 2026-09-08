@@ -1,47 +1,47 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { cn } from '@/lib/utils'
 
 const tabs = [
-  { label: "Services", segment: "" },
-  { label: "Environments", segment: "/environments" },
-  { label: "Deployments", segment: "/deployments" },
-  { label: "Secrets", segment: "/secrets" },
-  { label: "Routes", segment: "/routes" },
-  { label: "Integrations", segment: "/integrations" },
-  { label: "Settings", segment: "/settings" },
-] as const;
+  { label: 'Overview', href: '' },
+  { label: 'Deployments', href: '/deployments' },
+  { label: 'Environments', href: '/environments' },
+  { label: 'Secrets', href: '/secrets' },
+  { label: 'Routes', href: '/routes' },
+  { label: 'Integrations', href: '/integrations' },
+  { label: 'Settings', href: '/settings' },
+]
 
 export function ProjectTabs({ slug }: { slug: string }) {
-  const pathname = usePathname();
-  const base = `/projects/${slug}`;
+  const pathname = usePathname()
+  const base = `/projects/${slug}`
 
   return (
-    <nav className="flex gap-1 overflow-x-auto rounded-xl border bg-muted/40 p-1.5">
-      {tabs.map(({ label, segment }) => {
-        const href = `${base}${segment}`;
-        const active =
-          segment === ""
-            ? pathname === base || pathname === `${base}/`
-            : pathname.startsWith(href);
+    <nav className="flex gap-6 border-b">
+      {tabs.map((tab) => {
+        const href = tab.href ? `${base}${tab.href}` : base
+        const isActive =
+          tab.href === ''
+            ? pathname === base
+            : pathname.startsWith(`${base}${tab.href}`)
 
         return (
           <Link
-            key={segment}
+            key={tab.label}
             href={href}
             className={cn(
-              "rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors",
-              active
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+              'pb-2.5 pt-1 text-sm font-medium border-b-2 -mb-px transition-colors',
+              isActive
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50'
             )}
           >
-            {label}
+            {tab.label}
           </Link>
-        );
+        )
       })}
     </nav>
-  );
+  )
 }

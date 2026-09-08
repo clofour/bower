@@ -1,99 +1,231 @@
-"use client";
+'use client'
 
-import { useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Copy, Plus, Trash2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 import {
-  createInviteTokenAction,
-  revokeInviteTokenAction,
-} from "@/lib/actions/settings";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { createInviteTokenAction, revokeInviteTokenAction } from '@/lib/actions/settings'
 
-interface Token {
+interface TokenRow {
   token: {
-    id: string;
-    tokenPrefix: string;
-    role: string;
-    note: string | null;
-    usedAt: Date | null;
-    createdAt: Date;
-  };
-  createdByName: string | null;
+    id: string
+    tokenPrefix: string
+    role: string
+    note: string | null
+    usedAt: string | null
+    expiresAt: string | null
+    createdAt: string
+  }
+  createdByName: string | null
 }
 
-export function InviteTokensSection({
-  tokens,
-  canEdit,
-  currentRole,
-}: {
-  tokens: Token[];
-  canEdit: boolean;
-  currentRole: string;
-}) {
-  const [isPending, startTransition] = useTransition();
+interface InviteTokensSectionProps {
+  tokens: TokenRow[]
+  role: string
+}
+
+function tokenStatus(token: TokenRow['token']): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'success' } {
+  if (token.usedAt) return { label: 'Used', variant: 'secondary' }
+  if (token.expiresAt && new Date(token.expiresAt) < new Date()) return { label: 'Expired', variant: 'destructive' }
+  return { label: 'Active', variant: 'success' }
+}
+
+export function InviteTokensSection({ tokens, role }: InviteTokensSectionProps) {
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [createdToken, setCreatedToken] = useState<string | null>(null)
+  const [revoking, setRevoking] = useState<string | null>(null)
+  const [selectedRole, setSelectedRole] = useState<string>('member')
+
+  const isAdmin = role === 'owner' || role === 'admin'
+
+  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    const formData = new FormData(e.currentTarget)
+    const tokenRole = selectedRole as 'owner' | 'admin' | 'member'
+    const note = formData.get('note') as string | undefined
+    const result = await createInviteTokenAction(tokenRole, note || undefined)
+    if (result?.error) {
+      setError(result.error)
+    } else if (result?.token) {
+      setCreatedToken(result.token)
+      router.refresh()
+    }
+    setLoading(false)
+  }
+
+  async function handleRevoke(tokenId: string) {
+    setRevoking(tokenId)
+    await revokeInviteTokenAction(tokenId)
+    router.refresh()
+    setRevoking(null)
+  }
+
+  function handleClose() {
+    setOpen(false)
+    setCreatedToken(null)
+    setError(null)
+    setSelectedRole('member')
+  }
 
   return (
-    <Card className="p-5">
-      <h3 className="font-medium">Invite tokens</h3>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Generate single-use tokens to invite new members.
-      </p>
-
-      <div className="mt-4 space-y-2">
-        {tokens.map((t) => (
-          <div
-            key={t.token.id}
-            className="flex items-center justify-between rounded-lg border px-3 py-2"
-          >
-            <div className="flex items-center gap-2">
-              <code className="font-mono text-sm">{t.token.tokenPrefix}...</code>
-              <Badge variant="outline" className="capitalize">
-                {t.token.role}
-              </Badge>
-              {t.token.usedAt && (
-                <Badge variant="secondary">Used</Badge>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium">Invite Tokens</h3>
+          <p className="text-sm text-muted-foreground">
+            Generate tokens to invite new members to the organization.
+          </p>
+        </div>
+        {isAdmin && (
+          <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); else setOpen(true) }}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-1" />
+                Create Token
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Invite Token</DialogTitle>
+                <DialogDescription>
+                  Generate a one-time token to invite a new member.
+                </DialogDescription>
+              </DialogHeader>
+              {createdToken ? (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">Token created successfully. Copy it now -- it will not be shown again.</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 rounded bg-muted px-3 py-2 text-sm font-mono break-all">
+                      {createdToken}
+                    </code>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => navigator.clipboard.writeText(createdToken)}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={handleClose}>Done</Button>
+                  </DialogFooter>
+                </div>
+              ) : (
+                <form onSubmit={handleCreate} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="invite-role">Role</Label>
+                    <Select value={selectedRole} onValueChange={setSelectedRole}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="member">Member</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        {role === 'owner' && <SelectItem value="owner">Owner</SelectItem>}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="note">Note (optional)</Label>
+                    <Input id="note" name="note" placeholder="e.g. For new hire Jane" />
+                  </div>
+                  {error && <p className="text-sm text-destructive">{error}</p>}
+                  <DialogFooter>
+                    <Button type="submit" disabled={loading}>
+                      {loading ? 'Creating...' : 'Create Token'}
+                    </Button>
+                  </DialogFooter>
+                </form>
               )}
-            </div>
-            {canEdit && !t.token.usedAt && (
-              <form
-                action={async (_: FormData) => {
-                  await revokeInviteTokenAction(t.token.id);
-                }}
-              >
-                <Button size="sm" variant="ghost">
-                  Revoke
-                </Button>
-              </form>
-            )}
-          </div>
-        ))}
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
-      {canEdit && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.currentTarget);
-            const role = formData.get("role") as "owner" | "admin" | "member";
-            startTransition(async () => {
-              await createInviteTokenAction(role);
-            });
-          }}
-          className="mt-4 flex gap-2"
-        >
-          <select
-            name="role"
-            className="h-9 rounded-lg border border-input bg-background px-3 text-sm"
-          >
-            <option value="member">Member</option>
-            <option value="admin">Admin</option>
-            {currentRole === "owner" && <option value="owner">Owner</option>}
-          </select>
-          <Button variant="secondary" disabled={isPending}>
-            {isPending ? "Creating..." : "Generate token"}
-          </Button>
-        </form>
+      {tokens.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4">No invite tokens have been created.</p>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Prefix</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Note</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Created By</TableHead>
+              <TableHead>Created</TableHead>
+              {isAdmin && <TableHead className="w-[70px]" />}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {tokens.map((row) => {
+              const status = tokenStatus(row.token)
+              return (
+                <TableRow key={row.token.id}>
+                  <TableCell className="font-mono text-xs">{row.token.tokenPrefix}...</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{row.token.role}</Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{row.token.note || '--'}</TableCell>
+                  <TableCell>
+                    <Badge variant={status.variant}>{status.label}</Badge>
+                  </TableCell>
+                  <TableCell>{row.createdByName || '--'}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    {new Date(row.token.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  {isAdmin && (
+                    <TableCell>
+                      {!row.token.usedAt && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRevoke(row.token.id)}
+                          disabled={revoking === row.token.id}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  )}
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
       )}
-    </Card>
-  );
+    </div>
+  )
 }
