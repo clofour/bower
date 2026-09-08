@@ -1,103 +1,132 @@
-import { redirect } from 'next/navigation'
-import { getCurrentUser } from '@/lib/auth'
-import { getUserOrganization, getOrgMembers, getOrganizationTokens } from '@/lib/queries'
-import { PageHeading } from '@/components/page-heading'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Separator } from '@/components/ui/separator'
-import { OrgSettingsForm } from '@/components/org-settings-form'
-import { InviteTokensSection } from '@/components/invite-tokens-section'
+import { ShieldCheck, Trash2 } from 'lucide-react'
+import { PageHeader, Panel, Pill, formatDate } from '@/components/primitives'
+import { InviteTokenCreator } from '@/components/credential-creators'
+import { requireContext } from '@/lib/actions/shared'
+import { addOrganizationMemberAction } from '@/lib/actions/operations'
+import { revokeInviteTokenAction, updateOrganizationAction } from '@/lib/actions/settings'
+import { getOrgMembers, getOrganizationTokens } from '@/lib/queries'
 
-export default async function OrganizationSettingsPage() {
-  const user = await getCurrentUser()
-  if (!user) redirect('/login')
-  const orgCtx = await getUserOrganization(user.id)
-  if (!orgCtx) redirect('/login')
+async function updateOrganization(formData: FormData) {
+  'use server'
+  await updateOrganizationAction(formData)
+}
 
+export default async function OrganizationPage() {
+  const context = await requireContext()
   const [members, tokens] = await Promise.all([
-    getOrgMembers(orgCtx.org.id),
-    getOrganizationTokens(orgCtx.org.id),
+    getOrgMembers(context.org.id),
+    getOrganizationTokens(context.org.id),
   ])
+  const canAdmin = context.role !== 'member'
 
   return (
-    <div className="space-y-8">
-      <PageHeading title="Organization" description="Manage your organization settings and members." />
-
-      <OrgSettingsForm
-        org={{
-          id: orgCtx.org.id,
-          name: orgCtx.org.name,
-          slug: orgCtx.org.slug,
-          trellisApiUrl: orgCtx.org.trellisApiUrl,
-          trellisApiToken: orgCtx.org.trellisApiToken,
-        }}
+    <>
+      <PageHeader
+        eyebrow="Organization"
+        title={context.org.name}
+        description="Bower instance identity, Trellis control-plane connection, and organization-wide membership."
       />
 
-      <Separator />
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Members</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {members.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No members found.</p>
+      <div className="grid grid-2">
+        <Panel title="General" subtitle="The Trellis operator credential is write-only in this UI after saving.">
+          {canAdmin ? (
+            <form action={updateOrganization} className="form-grid">
+              <div className="field form-span">
+                <label>Organization name</label>
+                <input className="input" name="name" defaultValue={context.org.name} required />
+              </div>
+              <div className="field form-span">
+                <label>Trellis API URL</label>
+                <input className="input mono" name="trellisApiUrl" type="url" defaultValue={context.org.trellisApiUrl} placeholder="https://trellis.example.com:8128" />
+              </div>
+              <div className="field form-span">
+                <label>Replace Trellis operator token</label>
+                <input className="input mono" name="trellisApiToken" type="password" autoComplete="new-password" placeholder="Leave blank to keep the current token" />
+              </div>
+              <div className="form-actions">
+                <button className="button button-primary" type="submit">Save organization</button>
+              </div>
+            </form>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Member</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {members.map((m) => (
-                  <TableRow key={m.membership.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          {m.userAvatar && <AvatarImage src={m.userAvatar} />}
-                          <AvatarFallback className="text-xs">
-                            {(m.userName ?? '?')[0].toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        {m.userName}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{m.userEmail}</TableCell>
-                    <TableCell>
-                      <Badge variant={m.membership.role === 'owner' ? 'default' : 'secondary'}>
-                        {m.membership.role}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div>
+              <div className="key-value"><div className="key-label">Name</div><div>{context.org.name}</div></div>
+              <div className="key-value"><div className="key-label">Trellis API</div><div className="mono small">{context.org.trellisApiUrl}</div></div>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </Panel>
 
-      <Separator />
+        <Panel title="Members" subtitle="Organization roles set the ceiling for project access.">
+          {members.length ? (
+            <div className="list">
+              {members.map((row) => (
+                <div className="list-row" key={row.membership.id}>
+                  <div>
+                    <div className="list-title">{row.userName}</div>
+                    <div className="list-meta">{row.userEmail}</div>
+                  </div>
+                  <Pill tone={row.membership.role === 'owner' ? 'accent' : 'default'}>{row.membership.role}</Pill>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {context.role === 'owner' ? (
+            <details className="disclosure" style={{ margin: '12px -18px -18px' }}>
+              <summary>Add or change a member</summary>
+              <div className="disclosure-body">
+                <form action={addOrganizationMemberAction} className="form-grid">
+                  <div className="field">
+                    <label>Registered email</label>
+                    <input className="input" name="email" type="email" required />
+                  </div>
+                  <div className="field">
+                    <label>Role</label>
+                    <select className="select" name="role" defaultValue="member">
+                      <option value="member">Member</option>
+                      <option value="admin">Admin</option>
+                      <option value="owner">Owner</option>
+                    </select>
+                  </div>
+                  <div className="form-actions">
+                    <button className="button button-secondary" type="submit">Save member</button>
+                  </div>
+                </form>
+              </div>
+            </details>
+          ) : null}
+        </Panel>
+      </div>
 
-      <InviteTokensSection
-        tokens={tokens.map((t) => ({
-          token: {
-            id: t.token.id,
-            tokenPrefix: t.token.tokenPrefix,
-            role: t.token.role,
-            note: t.token.note,
-            usedAt: t.token.usedAt?.toISOString() ?? null,
-            expiresAt: t.token.expiresAt?.toISOString() ?? null,
-            createdAt: t.token.createdAt.toISOString(),
-          },
-          createdByName: t.createdByName,
-        }))}
-        role={orgCtx.role}
-      />
-    </div>
+      {canAdmin ? (
+        <div style={{ marginTop: 16 }}>
+          <Panel title={<span className="row"><ShieldCheck size={15} />Invite tokens</span>} subtitle="Single-use credentials for account registration.">
+            <InviteTokenCreator />
+            <div className="separator" />
+            {tokens.length ? (
+              <div className="list">
+                {tokens.map((row) => (
+                  <div className="list-row" key={row.token.id}>
+                    <div>
+                      <div className="list-title mono">{row.token.tokenPrefix}… <span className="muted">· {row.token.role}</span></div>
+                      <div className="list-meta">
+                        {row.token.note || 'No note'} · created {formatDate(row.token.createdAt)}
+                        {row.token.usedAt ? ' · used ' + formatDate(row.token.usedAt) : ' · unused'}
+                      </div>
+                    </div>
+                    <div className="list-actions">
+                      <Pill tone={row.token.usedAt ? 'default' : 'success'}>{row.token.usedAt ? 'used' : 'ready'}</Pill>
+                      {!row.token.usedAt ? (
+                        <form action={revokeInviteTokenAction.bind(null, row.token.id)}>
+                          <button className="button button-danger button-sm" type="submit"><Trash2 size={12} />Revoke</button>
+                        </form>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : <div className="muted small">No invite tokens have been created.</div>}
+          </Panel>
+        </div>
+      ) : null}
+    </>
   )
 }

@@ -1,65 +1,44 @@
-import { redirect } from 'next/navigation'
-import { getCurrentUser } from '@/lib/auth'
-import { getUserOrganization, getAuditLog } from '@/lib/queries'
-import { PageHeading } from '@/components/page-heading'
-import { Card, CardContent } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { ScrollText } from 'lucide-react'
+import { PageHeader, Panel, formatDate } from '@/components/primitives'
+import { requireContext } from '@/lib/actions/shared'
+import { getAuditLog } from '@/lib/queries'
 
-export default async function AuditLogPage() {
-  const user = await getCurrentUser()
-  if (!user) redirect('/login')
-  const orgCtx = await getUserOrganization(user.id)
-  if (!orgCtx) redirect('/login')
-
-  const entries = await getAuditLog(orgCtx.org.id)
+export default async function AuditPage() {
+  const context = await requireContext()
+  const entries = await getAuditLog(context.org.id, 100)
 
   return (
-    <div className="space-y-6">
-      <PageHeading title="Audit Log" description="Track changes across your organization." />
+    <>
+      <PageHeader
+        eyebrow="Organization"
+        title="Audit log"
+        description="A durable record of Bower mutations: who changed what, when, and with which before/after context."
+      />
 
-      {entries.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <ScrollText className="h-10 w-10 text-muted-foreground/50" />
-            <p className="text-muted-foreground">No audit entries yet.</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Time</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Resource</TableHead>
-                <TableHead>Resource ID</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {entries.map((e) => (
-                <TableRow key={e.entry.id}>
-                  <TableCell className="whitespace-nowrap text-muted-foreground">
-                    {new Date(e.entry.createdAt).toLocaleString()}
-                  </TableCell>
-                  <TableCell>{e.userName ?? 'System'}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="font-mono text-xs">
-                      {e.entry.action}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="capitalize">{e.entry.resourceType}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {e.entry.resourceId.slice(0, 8)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-    </div>
+      <Panel>
+        {entries.length ? (
+          <div>
+            {entries.map((row) => (
+              <details className="disclosure" key={row.entry.id}>
+                <summary>
+                  <div className="truncate">
+                    <span className="strong">{row.entry.action.replaceAll('.', ' ')}</span>
+                    <span className="muted small"> · {row.entry.resourceType}</span>
+                  </div>
+                  <span className="small muted">{row.userName || 'system'} · {formatDate(row.entry.createdAt)}</span>
+                </summary>
+                <div className="disclosure-body">
+                  <div className="key-value"><div className="key-label">Resource</div><div className="mono small">{row.entry.resourceId}</div></div>
+                  <div className="key-value"><div className="key-label">Actor</div><div>{row.userName || 'System / automation'}</div></div>
+                  <div className="key-value"><div className="key-label">Timestamp</div><div>{formatDate(row.entry.createdAt)}</div></div>
+                  <div style={{ marginTop: 12 }}>
+                    <pre className="code-panel">{JSON.stringify(row.entry.details || {}, null, 2)}</pre>
+                  </div>
+                </div>
+              </details>
+            ))}
+          </div>
+        ) : <div className="empty"><div className="empty-title">No audit entries</div><div>Mutations will be recorded here as the organization uses Bower.</div></div>}
+      </Panel>
+    </>
   )
 }

@@ -1,122 +1,142 @@
-import { redirect } from 'next/navigation'
+import { Lock, LockOpen, Plus, Trash2 } from 'lucide-react'
+import { notFound } from 'next/navigation'
+import { PageHeader, Panel, Pill, formatDate } from '@/components/primitives'
 import { getCurrentUser } from '@/lib/auth'
 import {
-  getUserOrganization,
-  getProjectBySlug,
-  getEnvironmentsByProject,
-} from '@/lib/queries'
-import { toggleEnvironmentLockAction } from '@/lib/actions/operations'
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Lock, Unlock, Layers } from 'lucide-react'
+  createEnvironmentAction,
+  deleteEnvironmentAction,
+  toggleEnvironmentLockAction,
+  updateEnvironmentAction,
+} from '@/lib/actions/operations'
+import { requireProject } from '@/lib/actions/shared'
+import { getEnvironmentsByProject, getProjectBySlug, getUserOrganization } from '@/lib/queries'
 
-export default async function EnvironmentsPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
-  const user = await getCurrentUser()
-  if (!user) redirect('/login')
+function envLines(value: unknown) {
+  if (!value || typeof value !== 'object') return ''
+  return Object.keys(value as Record<string, unknown>).map((key) => key + '=').join('\n')
+}
 
-  const ctx = await getUserOrganization(user.id)
-  if (!ctx) redirect('/login')
-
+export default async function EnvironmentsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const project = await getProjectBySlug(ctx.org.id, slug)
-  if (!project) redirect('/projects')
-
+  const user = await getCurrentUser()
+  if (!user) notFound()
+  const context = await getUserOrganization(user.id)
+  if (!context) notFound()
+  const project = await getProjectBySlug(context.org.id, slug)
+  if (!project) notFound()
+  const access = await requireProject(project.id)
   const environments = await getEnvironmentsByProject(project.id)
+  const canEdit = access.projectRole === 'admin'
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Environments</h2>
+    <>
+      <PageHeader
+        eyebrow="Release topology"
+        title="Environments"
+        description="Ordered promotion stages with independent defaults, Trellis namespaces, environment variables, and deployment locks."
+      />
 
-      {environments.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Layers className="h-10 w-10 text-muted-foreground mb-3" />
-            <h3 className="font-medium text-lg">No environments</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Create an environment to begin configuring deployments.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Slug</TableHead>
-              <TableHead>Resource Tier</TableHead>
-              <TableHead>Default Replicas</TableHead>
-              <TableHead>Promotion Order</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {environments.map((env) => (
-              <TableRow key={env.id}>
-                <TableCell className="font-medium">{env.name}</TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground">
-                  {env.slug}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{env.resourceTier}</Badge>
-                </TableCell>
-                <TableCell>{env.defaultReplicas}</TableCell>
-                <TableCell>{env.promotionOrder}</TableCell>
-                <TableCell>
-                  {env.isLocked ? (
-                    <Badge variant="warning">
-                      <Lock className="h-3 w-3 mr-1" />
-                      Locked
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline">
-                      <Unlock className="h-3 w-3 mr-1" />
-                      Unlocked
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <form
-                    action={toggleEnvironmentLockAction.bind(
-                      null,
-                      project.id,
-                      env.id,
-                      !env.isLocked
-                    )}
-                  >
-                    <Button variant="ghost" size="sm" type="submit">
-                      {env.isLocked ? (
-                        <>
-                          <Unlock className="h-3.5 w-3.5 mr-1" />
-                          Unlock
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="h-3.5 w-3.5 mr-1" />
-                          Lock
-                        </>
-                      )}
-                    </Button>
+      <div className="grid grid-2">
+        {environments.map((environment) => (
+          <Panel
+            key={environment.id}
+            title={<span className="row">{environment.name}{environment.isLocked ? <Pill tone="warning">locked</Pill> : null}</span>}
+            subtitle={environment.trellisNamespace}
+            action={canEdit ? (
+              <form action={toggleEnvironmentLockAction.bind(null, project.id, environment.id, !environment.isLocked)}>
+                <button className="button button-secondary button-sm" type="submit">
+                  {environment.isLocked ? <LockOpen size={13} /> : <Lock size={13} />}
+                  {environment.isLocked ? 'Unlock' : 'Lock'}
+                </button>
+              </form>
+            ) : undefined}
+          >
+            <div className="key-value"><div className="key-label">Promotion order</div><div>{environment.promotionOrder}</div></div>
+            <div className="key-value"><div className="key-label">Default replicas</div><div>{environment.defaultReplicas}</div></div>
+            <div className="key-value"><div className="key-label">Resource tier</div><div>{environment.resourceTier}</div></div>
+            <div className="key-value"><div className="key-label">Variables</div><div>{Object.keys((environment.envVars || {}) as Record<string, unknown>).length} secret-backed key{Object.keys((environment.envVars || {}) as Record<string, unknown>).length === 1 ? '' : 's'}</div></div>
+            <div className="key-value"><div className="key-label">Updated</div><div>{formatDate(environment.updatedAt)}</div></div>
+
+            {canEdit ? (
+              <details className="disclosure" style={{ margin: '14px -18px -18px' }}>
+                <summary>Edit environment</summary>
+                <div className="disclosure-body">
+                  <form action={updateEnvironmentAction.bind(null, project.id, environment.id)} className="form-grid">
+                    <div className="field">
+                      <label>Promotion order</label>
+                      <input className="input" name="promotionOrder" type="number" min="0" defaultValue={environment.promotionOrder} />
+                    </div>
+                    <div className="field">
+                      <label>Default replicas</label>
+                      <input className="input" name="replicas" type="number" min="0" defaultValue={environment.defaultReplicas} />
+                    </div>
+                    <div className="field">
+                      <label>Resource tier</label>
+                      <select className="select" name="resourceTier" defaultValue={environment.resourceTier}>
+                        {['small', 'medium', 'large', 'xl', 'custom'].map((tier) => <option key={tier} value={tier}>{tier}</option>)}
+                      </select>
+                    </div>
+                    <div className="field form-span">
+                      <label>Environment variables</label>
+                      <textarea className="textarea mono" name="envVars" defaultValue={envLines(environment.envVars)} placeholder={'API_URL=https://example.com\nFEATURE_FLAG=true'} />
+                      <span className="field-hint">Enter KEY=value. Existing values are not retrievable; leave the value blank to preserve an existing key.</span>
+                    </div>
+                    <div className="form-actions">
+                      <button className="button button-primary" type="submit">Save environment</button>
+                    </div>
                   </form>
-                </TableCell>
-              </TableRow>
+                </div>
+              </details>
+            ) : null}
+          </Panel>
+        ))}
+
+        {canEdit ? (
+          <Panel title={<span className="row"><Plus size={15} />Add environment</span>} subtitle="Appends a new promotion stage.">
+            <form action={createEnvironmentAction.bind(null, project.id)} className="form-grid">
+              <div className="field">
+                <label>Name</label>
+                <input className="input" name="name" placeholder="QA" required />
+              </div>
+              <div className="field">
+                <label>Default replicas</label>
+                <input className="input" name="replicas" type="number" min="0" defaultValue="1" />
+              </div>
+              <div className="field">
+                <label>Resource tier</label>
+                <select className="select" name="resourceTier" defaultValue="small">
+                  {['small', 'medium', 'large', 'xl', 'custom'].map((tier) => <option key={tier} value={tier}>{tier}</option>)}
+                </select>
+              </div>
+              <div className="field form-span">
+                <label>Environment variables</label>
+                <textarea className="textarea mono" name="envVars" placeholder={'API_URL=https://qa.example.com'} />
+              </div>
+              <div className="form-actions">
+                <button className="button button-primary" type="submit"><Plus size={13} />Create environment</button>
+              </div>
+            </form>
+          </Panel>
+        ) : null}
+      </div>
+
+      {canEdit && environments.length ? (
+        <Panel title="Environment removal" subtitle="Bower only permits removal after project services have been deleted." className="danger-zone" >
+          <div className="list">
+            {environments.map((environment) => (
+              <div className="list-row" key={environment.id}>
+                <div>
+                  <div className="list-title">{environment.name}</div>
+                  <div className="list-meta mono">{environment.trellisNamespace}</div>
+                </div>
+                <form action={deleteEnvironmentAction.bind(null, project.id, environment.id)}>
+                  <button className="button button-danger button-sm" type="submit"><Trash2 size={13} />Delete</button>
+                </form>
+              </div>
             ))}
-          </TableBody>
-        </Table>
-      )}
-    </div>
+          </div>
+        </Panel>
+      ) : null}
+    </>
   )
 }

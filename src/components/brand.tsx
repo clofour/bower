@@ -1,16 +1,15 @@
-import { Leaf } from 'lucide-react'
-import { cn } from '@/lib/utils'
-
-export function Brand({ className, size = 'default' }: { className?: string; size?: 'sm' | 'default' | 'lg' }) {
-  const iconSize = size === 'sm' ? 'h-5 w-5' : size === 'lg' ? 'h-8 w-8' : 'h-6 w-6'
-  const textSize = size === 'sm' ? 'text-base' : size === 'lg' ? 'text-2xl' : 'text-lg'
-
+export function Brand({ light = false }: { light?: boolean }) {
+  const stroke = light ? '#d7eee7' : '#0f766e'
+  const fill = light ? '#73c5b4' : '#10201c'
   return (
-    <div className={cn('flex items-center gap-2', className)}>
-      <div className="flex items-center justify-center rounded-lg bg-primary p-1.5">
-        <Leaf className={cn(iconSize, 'text-primary-foreground')} />
-      </div>
-      <span className={cn('font-semibold tracking-tight', textSize)}>Bower</span>
-    </div>
+    <span className="brand" aria-label="Bower">
+      <svg className="brand-mark" viewBox="0 0 32 32" role="img" aria-hidden="true">
+        <path d="M6.5 23.5V13.1L16 7l9.5 6.1v10.4" fill="none" stroke={stroke} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M10.2 25V16.4L16 12.7l5.8 3.7V25" fill="none" stroke={stroke} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" opacity=".68" />
+        <path d="M6 25.5h20" stroke={stroke} strokeWidth="2.2" strokeLinecap="round" />
+        <circle cx="16" cy="7" r="2.25" fill={fill} />
+      </svg>
+      <span className="brand-word">bower</span>
+    </span>
   )
 }

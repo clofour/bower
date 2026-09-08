@@ -1,143 +1,130 @@
-import { redirect } from 'next/navigation'
+import { Plus, Trash2 } from 'lucide-react'
+import { notFound } from 'next/navigation'
+import { WebhookCreator } from '@/components/webhook-creator'
+import { PageHeader, Panel, Pill, formatDate } from '@/components/primitives'
 import { getCurrentUser } from '@/lib/auth'
 import {
-  getUserOrganization,
+  createNotificationChannelAction,
+  deleteNotificationChannelAction,
+  deleteWebhookAction,
+} from '@/lib/actions/integrations'
+import { requireProject } from '@/lib/actions/shared'
+import {
+  getEnvironmentsByProject,
   getProjectBySlug,
   getProjectIntegrations,
+  getServicesByProject,
+  getUserOrganization,
 } from '@/lib/queries'
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Webhook, Bell } from 'lucide-react'
-import { Separator } from '@/components/ui/separator'
 
-export default async function IntegrationsPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
-  const user = await getCurrentUser()
-  if (!user) redirect('/login')
-
-  const ctx = await getUserOrganization(user.id)
-  if (!ctx) redirect('/login')
-
+export default async function IntegrationsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const project = await getProjectBySlug(ctx.org.id, slug)
-  if (!project) redirect('/projects')
+  const user = await getCurrentUser()
+  if (!user) notFound()
+  const context = await getUserOrganization(user.id)
+  if (!context) notFound()
+  const project = await getProjectBySlug(context.org.id, slug)
+  if (!project) notFound()
+  const access = await requireProject(project.id)
+  const canEdit = access.projectRole === 'admin'
 
-  const { hooks, channels } = await getProjectIntegrations(project.id)
+  const [{ hooks, channels }, services, environments] = await Promise.all([
+    getProjectIntegrations(project.id),
+    getServicesByProject(project.id),
+    getEnvironmentsByProject(project.id),
+  ])
 
   return (
-    <div className="space-y-8">
-      {/* Webhooks section */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Webhook className="h-5 w-5" />
-          Webhooks
-        </h2>
+    <>
+      <PageHeader
+        eyebrow="Automation"
+        title="Integrations"
+        description="Trigger deployments from registries or CI, then send release events to the systems your team already watches."
+      />
 
-        {hooks.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-              <p className="text-sm text-muted-foreground">
-                No webhook endpoints configured.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Service</TableHead>
-                <TableHead>Environment</TableHead>
-                <TableHead>Provider</TableHead>
-                <TableHead>Deploy Mode</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+      <div className="grid grid-2">
+        <Panel title="Inbound deployment hooks" subtitle="Tokens also act as HMAC-SHA256 signing secrets.">
+          {hooks.length ? (
+            <div className="list">
               {hooks.map((row) => (
-                <TableRow key={row.hook.id}>
-                  <TableCell className="font-medium">
-                    {row.serviceName}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{row.environmentName}</Badge>
-                  </TableCell>
-                  <TableCell className="capitalize">
-                    {row.hook.provider}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {row.hook.deployMode.replace(/_/g, ' ')}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={row.hook.isActive ? 'success' : 'outline'}>
-                      {row.hook.isActive ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
+                <div className="list-row" key={row.hook.id}>
+                  <div className="list-main">
+                    <div className="list-title">{row.serviceName} → {row.environmentName}</div>
+                    <div className="list-meta">{row.hook.provider.replaceAll('_', ' ')} · {row.hook.deployMode.replaceAll('_', ' ')} · token {row.hook.tokenPrefix}… · {formatDate(row.hook.createdAt)}</div>
+                    {row.hook.tagFilter ? <div className="list-meta mono">{row.hook.tagFilter}</div> : null}
+                  </div>
+                  <div className="list-actions">
+                    <Pill tone={row.hook.isActive ? 'success' : 'default'}>{row.hook.isActive ? 'active' : 'inactive'}</Pill>
+                    {canEdit ? (
+                      <form action={deleteWebhookAction.bind(null, project.id, row.hook.id)}>
+                        <button className="button button-danger button-sm" type="submit"><Trash2 size={12} /></button>
+                      </form>
+                    ) : null}
+                  </div>
+                </div>
               ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+            </div>
+          ) : <div className="empty"><div className="empty-title">No inbound hooks</div><div>Create one to let CI or a registry initiate deployments.</div></div>}
 
-      <Separator />
+          {canEdit ? (
+            <details className="disclosure" style={{ margin: '12px -18px -18px' }}>
+              <summary><span className="row"><Plus size={13} />Create endpoint</span></summary>
+              <div className="disclosure-body">
+                <WebhookCreator projectId={project.id} services={services} environments={environments} />
+              </div>
+            </details>
+          ) : null}
+        </Panel>
 
-      {/* Notification Channels section */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Bell className="h-5 w-5" />
-          Notification Channels
-        </h2>
-
-        {channels.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-              <p className="text-sm text-muted-foreground">
-                No notification channels configured.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        <Panel title="Outbound notifications" subtitle="Deployment events delivered over HTTPS.">
+          {channels.length ? (
+            <div className="list">
               {channels.map((channel) => (
-                <TableRow key={channel.id}>
-                  <TableCell className="font-medium">{channel.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="capitalize">
-                      {channel.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={channel.isActive ? 'success' : 'outline'}
-                    >
-                      {channel.isActive ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
+                <div className="list-row" key={channel.id}>
+                  <div className="list-main">
+                    <div className="list-title">{channel.name}</div>
+                    <div className="list-meta">{channel.type} · {channel.isActive ? 'active' : 'inactive'} · {formatDate(channel.createdAt)}</div>
+                  </div>
+                  {canEdit ? (
+                    <form action={deleteNotificationChannelAction.bind(null, project.id, channel.id)}>
+                      <button className="button button-danger button-sm" type="submit"><Trash2 size={12} /></button>
+                    </form>
+                  ) : null}
+                </div>
               ))}
-            </TableBody>
-          </Table>
-        )}
+            </div>
+          ) : <div className="empty"><div className="empty-title">No notification channels</div><div>Add Slack, Discord, or a generic HTTP destination.</div></div>}
+
+          {canEdit ? (
+            <details className="disclosure" style={{ margin: '12px -18px -18px' }}>
+              <summary><span className="row"><Plus size={13} />Add channel</span></summary>
+              <div className="disclosure-body">
+                <form action={createNotificationChannelAction.bind(null, project.id)} className="form-grid">
+                  <div className="field">
+                    <label>Name</label>
+                    <input className="input" name="name" placeholder="Release room" required />
+                  </div>
+                  <div className="field">
+                    <label>Type</label>
+                    <select className="select" name="type" defaultValue="http">
+                      <option value="slack">Slack</option>
+                      <option value="discord">Discord</option>
+                      <option value="http">Generic HTTP</option>
+                    </select>
+                  </div>
+                  <div className="field form-span">
+                    <label>HTTPS endpoint</label>
+                    <input className="input mono" name="url" type="url" placeholder="https://…" required />
+                  </div>
+                  <div className="form-actions">
+                    <button className="button button-primary" type="submit">Add channel</button>
+                  </div>
+                </form>
+              </div>
+            </details>
+          ) : null}
+        </Panel>
       </div>
-    </div>
+    </>
   )
 }

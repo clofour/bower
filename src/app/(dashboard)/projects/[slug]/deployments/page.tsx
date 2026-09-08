@@ -1,119 +1,155 @@
-import { redirect } from 'next/navigation'
+import { RefreshCw } from 'lucide-react'
+import { notFound } from 'next/navigation'
+import { PageHeader, Panel, StatusPill, formatDate } from '@/components/primitives'
 import { getCurrentUser } from '@/lib/auth'
-import { getUserOrganization, getProjectBySlug, getDeploymentsByProject } from '@/lib/queries'
+import { refreshDeploymentStatusesAction } from '@/lib/actions/services'
+import { requireProject } from '@/lib/actions/shared'
 import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { StatusDot } from '@/components/status'
-import { DeploymentPoller } from '@/components/deployment-poller'
-import { Rocket } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
-
-const activeStatuses = ['pending', 'planning', 'deploying']
-
-function formatTime(date: Date | string | null): string {
-  if (!date) return '-'
-  const d = new Date(date)
-  return d.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-function imageShort(image: string | null): string {
-  if (!image) return '-'
-  const parts = image.split('/')
-  const last = parts[parts.length - 1]
-  if (last.length > 40) return last.slice(0, 37) + '...'
-  return last
-}
+  getDeploymentEvents,
+  getDeploymentsByProject,
+  getEnvironmentsByProject,
+  getProjectBySlug,
+  getServicesByProject,
+  getUserOrganization,
+} from '@/lib/queries'
 
 export default async function DeploymentsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const user = await getCurrentUser()
-  if (!user) redirect('/login')
-
-  const ctx = await getUserOrganization(user.id)
-  if (!ctx) redirect('/login')
-
   const { slug } = await params
-  const project = await getProjectBySlug(ctx.org.id, slug)
-  if (!project) redirect('/projects')
+  const filters = await searchParams
+  const user = await getCurrentUser()
+  if (!user) notFound()
+  const context = await getUserOrganization(user.id)
+  if (!context) notFound()
+  const project = await getProjectBySlug(context.org.id, slug)
+  if (!project) notFound()
+  await requireProject(project.id)
 
-  const rows = await getDeploymentsByProject(project.id)
-  const hasActive = rows.some((r) =>
-    activeStatuses.includes(r.deployment.status)
+  const [allRows, services, environments] = await Promise.all([
+    getDeploymentsByProject(project.id, 100),
+    getServicesByProject(project.id),
+    getEnvironmentsByProject(project.id),
+  ])
+
+  const service = typeof filters.service === 'string' ? filters.service : ''
+  const environment = typeof filters.environment === 'string' ? filters.environment : ''
+  const status = typeof filters.status === 'string' ? filters.status : ''
+  const rows = allRows.filter((row) =>
+    (!service || row.deployment.serviceId === service) &&
+    (!environment || row.deployment.environmentId === environment) &&
+    (!status || row.deployment.status === status)
   )
+  const events = await getDeploymentEvents(rows.map((row) => row.deployment.id))
+  const eventsByDeployment = new Map<string, typeof events>()
+  for (const event of events) {
+    const list = eventsByDeployment.get(event.deploymentId) || []
+    list.push(event)
+    eventsByDeployment.set(event.deploymentId, list)
+  }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Deployment History</h2>
+    <>
+      <PageHeader
+        eyebrow="Release history"
+        title="Deployments"
+        description="Every release, promotion, rollback, plan, and convergence event Bower has recorded."
+        actions={
+          <form action={refreshDeploymentStatusesAction.bind(null, project.id)}>
+            <button className="button button-secondary" type="submit"><RefreshCw size={14} />Refresh status</button>
+          </form>
+        }
+      />
 
-      <DeploymentPoller active={hasActive} />
+      <Panel>
+        <form className="filterbar" method="get">
+          <div className="field">
+            <label>Service</label>
+            <select className="select" name="service" defaultValue={service}>
+              <option value="">All services</option>
+              {services.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label>Environment</label>
+            <select className="select" name="environment" defaultValue={environment}>
+              <option value="">All environments</option>
+              {environments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label>Status</label>
+            <select className="select" name="status" defaultValue={status}>
+              <option value="">All statuses</option>
+              {['pending', 'planning', 'deploying', 'healthy', 'failed', 'rolled_back'].map((item) => <option key={item} value={item}>{item.replaceAll('_', ' ')}</option>)}
+            </select>
+          </div>
+          <button className="button button-secondary" type="submit">Filter</button>
+        </form>
 
-      {rows.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Rocket className="h-10 w-10 text-muted-foreground mb-3" />
-            <h3 className="font-medium text-lg">No deployments yet</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Deploy a service to see its history here.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Status</TableHead>
-              <TableHead>Service</TableHead>
-              <TableHead>Environment</TableHead>
-              <TableHead>Image</TableHead>
-              <TableHead>Triggered by</TableHead>
-              <TableHead>Strategy</TableHead>
-              <TableHead>Time</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.deployment.id}>
-                <TableCell>
-                  <StatusDot status={row.deployment.status} />
-                </TableCell>
-                <TableCell className="font-medium">{row.serviceName}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{row.environmentName}</Badge>
-                </TableCell>
-                <TableCell className="font-mono text-xs">
-                  {imageShort(row.deployment.imageAfter)}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {row.userName ?? row.deployment.triggerType}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">
-                    {row.deployment.strategy.replace(/_/g, ' ')}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {formatTime(row.deployment.createdAt)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-    </div>
+        {rows.length === 0 ? (
+          <div className="empty">
+            <div className="empty-title">No matching deployments</div>
+            <div>Release records will appear here after a service is deployed.</div>
+          </div>
+        ) : (
+          <div>
+            {rows.map((row) => {
+              const deploymentEvents = eventsByDeployment.get(row.deployment.id) || []
+              return (
+                <details className="disclosure" key={row.deployment.id}>
+                  <summary>
+                    <div className="row" style={{ minWidth: 0 }}>
+                      <StatusPill status={row.deployment.status} />
+                      <div className="truncate">
+                        <span className="strong">{row.serviceName}</span>
+                        <span className="muted"> → {row.environmentName}</span>
+                        <span className="muted small"> · {row.deployment.imageAfter}</span>
+                      </div>
+                    </div>
+                    <span className="small muted">{formatDate(row.deployment.createdAt)}</span>
+                  </summary>
+                  <div className="disclosure-body">
+                    <div className="grid grid-2">
+                      <div>
+                        <div className="key-value"><div className="key-label">Triggered by</div><div>{row.userName || row.deployment.triggerType}</div></div>
+                        <div className="key-value"><div className="key-label">Strategy</div><div>{row.deployment.strategy.replaceAll('_', ' ')}</div></div>
+                        <div className="key-value"><div className="key-label">Revision</div><div>{row.deployment.trellisRevision ?? '—'}</div></div>
+                        <div className="key-value"><div className="key-label">Previous image</div><div className="mono small">{row.deployment.imageBefore || '—'}</div></div>
+                        <div className="key-value"><div className="key-label">Completed</div><div>{formatDate(row.deployment.completedAt)}</div></div>
+                      </div>
+                      <div>
+                        <div className="strong small" style={{ marginBottom: 10 }}>Convergence timeline</div>
+                        {deploymentEvents.length ? (
+                          <div className="timeline">
+                            {deploymentEvents.map((event) => (
+                              <div className="timeline-item" key={event.id}>
+                                <div className="timeline-title">{event.message}</div>
+                                <div className="timeline-meta">{event.type} · {formatDate(event.createdAt)}</div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : <div className="muted small">No detailed events recorded.</div>}
+                      </div>
+                    </div>
+                    {row.deployment.planDiff ? (
+                      <>
+                        <div className="separator" />
+                        <div className="strong small" style={{ marginBottom: 8 }}>Trellis plan</div>
+                        <pre className="code-panel">{JSON.stringify(row.deployment.planDiff, null, 2)}</pre>
+                      </>
+                    ) : null}
+                  </div>
+                </details>
+              )
+            })}
+          </div>
+        )}
+      </Panel>
+    </>
   )
 }

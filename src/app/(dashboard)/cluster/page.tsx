@@ -1,142 +1,99 @@
-import { redirect } from 'next/navigation'
-import { getCurrentUser } from '@/lib/auth'
-import { getUserOrganization } from '@/lib/queries'
+import { Server, Wind } from 'lucide-react'
+import { PageHeader, Metric, Panel, Pill, StatusPill, formatBytes, formatDate, percent } from '@/components/primitives'
+import { requireContext } from '@/lib/actions/shared'
+import { setNodeDrainAction } from '@/lib/actions/operations'
 import { getTrellisClient } from '@/lib/trellis-instance'
-import { PageHeading } from '@/components/page-heading'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Card } from '@/components/ui/card'
-import { StatusDot } from '@/components/status'
-import { Badge } from '@/components/ui/badge'
-import { Server } from 'lucide-react'
-import { DrainToggle } from './drain-toggle'
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`
-  const kb = bytes / 1024
-  if (kb < 1024) return `${Math.round(kb)} KB`
-  const mb = kb / 1024
-  if (mb < 1024) return `${Math.round(mb)} MB`
-  const gb = mb / 1024
-  return `${gb.toFixed(1)} GB`
-}
-
-function formatCpu(millicores: number) {
-  if (millicores >= 1000) return `${(millicores / 1000).toFixed(1)} cores`
-  return `${millicores}m`
-}
+import type { TrellisAllocation, TrellisNode } from '@/types/trellis'
 
 export default async function ClusterPage() {
-  const user = await getCurrentUser()
-  if (!user) redirect('/login')
-
-  const orgCtx = await getUserOrganization(user.id)
-  if (!orgCtx) redirect('/login')
-
-  let nodes: Awaited<ReturnType<Awaited<ReturnType<typeof getTrellisClient>>['listNodes']>> = []
-  let error: string | null = null
+  const context = await requireContext()
+  let nodes: TrellisNode[] = []
+  let allocations: TrellisAllocation[] = []
+  let error = ''
 
   try {
-    const client = await getTrellisClient(orgCtx.org.id)
-    nodes = await client.listNodes()
-  } catch (err) {
-    error = err instanceof Error ? err.message : 'Failed to connect to Trellis cluster.'
+    const client = await getTrellisClient(context.org.id)
+    ;[nodes, allocations] = await Promise.all([
+      client.listNodes(),
+      client.listAllocations().catch(() => []),
+    ])
+  } catch (cause) {
+    error = cause instanceof Error ? cause.message : 'Could not reach the Trellis cluster.'
   }
 
+  const totalCpu = nodes.reduce((sum, node) => sum + node.cpu, 0)
+  const usedCpu = nodes.reduce((sum, node) => sum + (node.cpu_used || 0), 0)
+  const totalMemory = nodes.reduce((sum, node) => sum + node.memory, 0)
+  const usedMemory = nodes.reduce((sum, node) => sum + (node.memory_used || 0), 0)
+
   return (
-    <div className="space-y-6">
-      <PageHeading
+    <>
+      <PageHeader
+        eyebrow="Trellis"
         title="Cluster"
-        description="Trellis cluster node overview"
+        description="Physical scheduling capacity stays a Trellis concern; Bower exposes the operational state application owners need."
       />
 
-      {error ? (
-        <Card className="flex flex-col items-center justify-center py-16">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-            <Server className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <h3 className="mb-1 text-sm font-medium">Unable to reach cluster</h3>
-          <p className="max-w-md text-center text-sm text-muted-foreground">{error}</p>
-        </Card>
-      ) : nodes.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center py-16">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-            <Server className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <h3 className="mb-1 text-sm font-medium">No nodes</h3>
-          <p className="text-sm text-muted-foreground">
-            No nodes are registered with the Trellis cluster.
-          </p>
-        </Card>
-      ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>CPU</TableHead>
-                <TableHead>Memory</TableHead>
-                <TableHead>Arch</TableHead>
-                <TableHead>Version</TableHead>
-                <TableHead className="text-right">Drain</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {nodes.map((node) => (
-                <TableRow key={node.id}>
-                  <TableCell className="font-medium">{node.id}</TableCell>
-                  <TableCell>
-                    <StatusDot status={node.status} />
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {node.address}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="text-sm">{formatCpu(node.cpu)}</span>
-                      {node.cpu_used !== undefined && (
-                        <span className="text-xs text-muted-foreground">
-                          {formatCpu(node.cpu_used)} used
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="text-sm">{formatBytes(node.memory)}</span>
-                      {node.memory_used !== undefined && (
-                        <span className="text-xs text-muted-foreground">
-                          {formatBytes(node.memory_used)} used
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{node.arch}</Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {node.version}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DrainToggle
-                      nodeId={node.id}
-                      drain={node.status === 'draining'}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
-    </div>
+      {error ? <div className="callout danger" style={{ marginBottom: 16 }}>{error}</div> : null}
+
+      <div className="grid grid-4" style={{ marginBottom: 16 }}>
+        <Metric label="Nodes" value={nodes.length || '—'} detail={nodes.length ? nodes.filter((node) => node.status === 'healthy').length + ' healthy' : 'Unavailable'} />
+        <Metric label="Allocations" value={allocations.length || '—'} detail={allocations.length ? allocations.filter((allocation) => allocation.phase === 'running').length + ' running' : 'No live inventory'} />
+        <Metric label="CPU" value={nodes.length ? percent(usedCpu, totalCpu) + '%' : '—'} detail={nodes.length ? usedCpu + 'm / ' + totalCpu + 'm' : 'No capacity data'} />
+        <Metric label="Memory" value={nodes.length ? percent(usedMemory, totalMemory) + '%' : '—'} detail={nodes.length ? formatBytes(usedMemory) + ' / ' + formatBytes(totalMemory) : 'No capacity data'} />
+      </div>
+
+      <div className="grid grid-2">
+        {nodes.map((node) => {
+          const nodeAllocations = allocations.filter((allocation) => allocation.node_id === node.id)
+          const cpuPercent = percent(node.cpu_used, node.cpu)
+          const memoryPercent = percent(node.memory_used, node.memory)
+          return (
+            <Panel
+              key={node.id}
+              title={<span className="row"><Server size={15} />{node.host || node.address}<StatusPill status={node.status} /></span>}
+              subtitle={node.id}
+              action={context.role === 'owner' ? (
+                <form action={setNodeDrainAction.bind(null, node.id, node.status !== 'draining')}>
+                  <button className="button button-secondary button-sm" type="submit">
+                    <Wind size={12} />{node.status === 'draining' ? 'Undrain' : 'Drain'}
+                  </button>
+                </form>
+              ) : undefined}
+            >
+              <div className="grid grid-2">
+                <div>
+                  <div className="row-between small"><span className="muted">CPU</span><span>{node.cpu_used || 0}m / {node.cpu}m</span></div>
+                  <div className="progress" style={{ marginTop: 6 }}><span style={{ width: cpuPercent + '%' }} /></div>
+                </div>
+                <div>
+                  <div className="row-between small"><span className="muted">Memory</span><span>{formatBytes(node.memory_used || 0)} / {formatBytes(node.memory)}</span></div>
+                  <div className="progress" style={{ marginTop: 6 }}><span style={{ width: memoryPercent + '%' }} /></div>
+                </div>
+              </div>
+              <div className="separator" />
+              <div className="grid grid-2">
+                <div className="key-value"><div className="key-label">Runtime</div><div>{node.os}/{node.arch}</div></div>
+                <div className="key-value"><div className="key-label">Version</div><div className="mono small">{node.version}</div></div>
+                <div className="key-value"><div className="key-label">Allocations</div><div>{nodeAllocations.length}</div></div>
+                <div className="key-value"><div className="key-label">Heartbeat</div><div>{formatDate(node.last_heartbeat)}</div></div>
+              </div>
+              {Object.keys(node.labels || {}).length ? (
+                <div className="row" style={{ marginTop: 13 }}>
+                  {Object.entries(node.labels).map(([key, value]) => <Pill key={key}>{key}={value}</Pill>)}
+                </div>
+              ) : null}
+              {(node.host_volumes || node.volumes || []).length ? (
+                <div className="small muted" style={{ marginTop: 13 }}>Host volumes: {(node.host_volumes || node.volumes || []).join(', ')}</div>
+              ) : null}
+            </Panel>
+          )
+        })}
+      </div>
+
+      {!error && nodes.length === 0 ? (
+        <Panel><div className="empty"><div className="empty-title">No nodes reported</div><div>Check the organization Trellis connection and cluster registration.</div></div></Panel>
+      ) : null}
+    </>
   )
 }

@@ -1,26 +1,19 @@
 import type { Metadata } from 'next'
-import { Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google'
+import type { ReactNode } from 'react'
 import './globals.css'
 
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  variable: '--font-jakarta',
-})
-
-const jetbrains = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-jetbrains',
-})
-
 export const metadata: Metadata = {
-  title: 'Bower',
-  description: 'Deployment management for Trellis',
+  title: {
+    default: 'Bower',
+    template: '%s · Bower',
+  },
+  description: 'An opinionated deployment platform for Trellis.',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" className={`${jakarta.variable} ${jetbrains.variable}`}>
-      <body className="font-sans antialiased">{children}</body>
+    <html lang="en">
+      <body>{children}</body>
     </html>
   )
 }

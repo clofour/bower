@@ -1,113 +1,138 @@
-import { redirect } from 'next/navigation'
-import { getCurrentUser } from '@/lib/auth'
-import { getUserOrganization, getTeamsByOrg, getTeamMembers, getTeamProjectAccessList } from '@/lib/queries'
-import { PageHeading } from '@/components/page-heading'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { TeamActions } from './team-actions'
-import { Users } from 'lucide-react'
+import { Plus, Trash2, UserMinus } from 'lucide-react'
+import { PageHeader, Panel, Pill } from '@/components/primitives'
+import { requireContext } from '@/lib/actions/shared'
+import {
+  addTeamMemberAction,
+  createTeamAction,
+  deleteTeamAction,
+  grantTeamProjectAction,
+  removeTeamMemberAction,
+  revokeTeamProjectAction,
+} from '@/lib/actions/operations'
+import {
+  getProjectsByOrg,
+  getTeamMembers,
+  getTeamProjectAccessList,
+  getTeamsByOrg,
+} from '@/lib/queries'
 
 export default async function TeamsPage() {
-  const user = await getCurrentUser()
-  if (!user) redirect('/login')
-  const orgCtx = await getUserOrganization(user.id)
-  if (!orgCtx) redirect('/login')
-
-  const teams = await getTeamsByOrg(orgCtx.org.id)
-
-  const teamsWithDetails = await Promise.all(
-    teams.map(async (team) => {
-      const [members, access] = await Promise.all([
-        getTeamMembers(team.id),
-        getTeamProjectAccessList(team.id),
-      ])
-      return { team, members, access }
-    })
-  )
+  const context = await requireContext()
+  const canEdit = context.role === 'owner' || context.role === 'admin'
+  const [teams, projects] = await Promise.all([
+    getTeamsByOrg(context.org.id),
+    getProjectsByOrg(context.org.id),
+  ])
+  const rows = await Promise.all(teams.map(async (team) => ({
+    team,
+    members: await getTeamMembers(team.id),
+    access: await getTeamProjectAccessList(team.id),
+  })))
 
   return (
-    <div className="space-y-6">
-      <PageHeading
+    <>
+      <PageHeader
+        eyebrow="Organization"
         title="Teams"
-        description="Manage teams and their project access."
-        actions={<TeamActions mode="create" />}
+        description="Group organization members, then grant project-scoped admin, deployer, or viewer access."
       />
 
-      {teamsWithDetails.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <Users className="h-10 w-10 text-muted-foreground/50" />
-            <p className="text-muted-foreground">No teams yet. Create one to organize project access.</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {teamsWithDetails.map(({ team, members, access }) => (
-            <Card key={team.id}>
-              <CardHeader className="flex-row items-center justify-between space-y-0">
-                <div className="flex items-center gap-2">
-                  <CardTitle className="text-base">{team.name}</CardTitle>
-                  <Badge variant="secondary">{members.length} members</Badge>
-                </div>
-                <TeamActions mode="delete" teamId={team.id} teamName={team.name} />
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="mb-2 text-sm font-medium">Members</h4>
-                  {members.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No members.</p>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Email</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {members.map((m) => (
-                          <TableRow key={m.membership.id}>
-                            <TableCell>{m.userName}</TableCell>
-                            <TableCell className="text-muted-foreground">{m.userEmail}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </div>
-                <Separator />
-                <div>
-                  <h4 className="mb-2 text-sm font-medium">Project access</h4>
-                  {access.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No project access granted.</p>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Project</TableHead>
-                          <TableHead>Role</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {access.map((a) => (
-                          <TableRow key={a.access.id}>
-                            <TableCell>{a.projectName}</TableCell>
-                            <TableCell>
-                              <Badge variant="secondary">{a.access.role}</Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      <div className="stack">
+        {rows.map(({ team, members, access }) => (
+          <Panel
+            key={team.id}
+            title={team.name}
+            subtitle={members.length + ' member' + (members.length === 1 ? '' : 's') + ' · ' + access.length + ' project grant' + (access.length === 1 ? '' : 's')}
+            action={canEdit ? (
+              <form action={deleteTeamAction.bind(null, team.id)}>
+                <button className="button button-danger button-sm" type="submit"><Trash2 size={12} />Delete team</button>
+              </form>
+            ) : undefined}
+          >
+            <div className="grid grid-2">
+              <div>
+                <div className="strong small" style={{ marginBottom: 8 }}>Members</div>
+                {members.length ? (
+                  <div className="list panel">
+                    {members.map((member) => (
+                      <div className="list-row" key={member.membership.id}>
+                        <div>
+                          <div className="list-title">{member.userName}</div>
+                          <div className="list-meta">{member.userEmail}</div>
+                        </div>
+                        {canEdit ? (
+                          <form action={removeTeamMemberAction.bind(null, team.id, member.membership.id)}>
+                            <button className="button button-danger button-sm" type="submit" title="Remove member"><UserMinus size={12} /></button>
+                          </form>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : <div className="muted small">No members.</div>}
+                {canEdit ? (
+                  <form action={addTeamMemberAction.bind(null, team.id)} className="row" style={{ marginTop: 10 }}>
+                    <input className="input" name="email" type="email" placeholder="member@example.com" required style={{ flex: 1 }} />
+                    <button className="button button-secondary button-sm" type="submit">Add</button>
+                  </form>
+                ) : null}
+              </div>
+
+              <div>
+                <div className="strong small" style={{ marginBottom: 8 }}>Project access</div>
+                {access.length ? (
+                  <div className="list panel">
+                    {access.map((row) => (
+                      <div className="list-row" key={row.access.id}>
+                        <div>
+                          <div className="list-title">{row.projectName}</div>
+                          <div className="list-meta mono">{row.projectSlug}</div>
+                        </div>
+                        <div className="list-actions">
+                          <Pill tone={row.access.role === 'admin' ? 'accent' : row.access.role === 'deployer' ? 'blue' : 'default'}>{row.access.role}</Pill>
+                          {canEdit ? (
+                            <form action={revokeTeamProjectAction.bind(null, team.id, row.access.id)}>
+                              <button className="button button-danger button-sm" type="submit">Revoke</button>
+                            </form>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : <div className="muted small">No project grants.</div>}
+                {canEdit && projects.length ? (
+                  <form action={grantTeamProjectAction.bind(null, team.id)} className="row" style={{ marginTop: 10 }}>
+                    <select className="select" name="projectId" required defaultValue="" style={{ flex: 1, minWidth: 150 }}>
+                      <option value="" disabled>Choose project</option>
+                      {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+                    </select>
+                    <select className="select" name="role" defaultValue="viewer" style={{ width: 125 }}>
+                      <option value="viewer">Viewer</option>
+                      <option value="deployer">Deployer</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <button className="button button-secondary button-sm" type="submit">Grant</button>
+                  </form>
+                ) : null}
+              </div>
+            </div>
+          </Panel>
+        ))}
+
+        {rows.length === 0 ? (
+          <Panel><div className="empty"><div className="empty-title">No teams</div><div>Create a team to scope project access for organization members.</div></div></Panel>
+        ) : null}
+      </div>
+
+      {canEdit ? (
+        <div style={{ marginTop: 16 }}>
+          <Panel title={<span className="row"><Plus size={15} />Create team</span>} subtitle="Teams are organization-wide; project roles are granted separately.">
+            <form action={createTeamAction} className="row">
+              <input className="input" name="name" placeholder="Platform" required style={{ maxWidth: 320 }} />
+              <button className="button button-primary" type="submit">Create team</button>
+            </form>
+          </Panel>
         </div>
-      )}
-    </div>
+      ) : null}
+    </>
   )
 }

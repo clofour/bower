@@ -1,35 +1,44 @@
-import { redirect, notFound } from 'next/navigation'
+import type { ReactNode } from 'react'
+import { notFound } from 'next/navigation'
+import { ProjectNav } from '@/components/project-nav'
 import { getCurrentUser } from '@/lib/auth'
-import { getUserOrganization, getProjectBySlug } from '@/lib/queries'
-import { PageHeading } from '@/components/page-heading'
-import { ProjectTabs } from '@/components/project-tabs'
+import { getProjectBySlug, getUserOrganization } from '@/lib/queries'
+import { requireProject } from '@/lib/actions/shared'
 
 export default async function ProjectLayout({
   children,
   params,
 }: {
-  children: React.ReactNode
+  children: ReactNode
   params: Promise<{ slug: string }>
 }) {
-  const user = await getCurrentUser()
-  if (!user) redirect('/login')
-
-  const ctx = await getUserOrganization(user.id)
-  if (!ctx) redirect('/login')
-
   const { slug } = await params
-  const project = await getProjectBySlug(ctx.org.id, slug)
+  const user = await getCurrentUser()
+  if (!user) notFound()
+  const context = await getUserOrganization(user.id)
+  if (!context) notFound()
+  const project = await getProjectBySlug(context.org.id, slug)
   if (!project) notFound()
 
+  let access
+  try {
+    access = await requireProject(project.id)
+  } catch {
+    notFound()
+  }
+
   return (
-    <div className="space-y-6">
-      <PageHeading
-        eyebrow="Project"
-        title={project.name}
-        description={project.description ?? undefined}
-      />
-      <ProjectTabs slug={slug} />
-      <div>{children}</div>
-    </div>
+    <>
+      <header className="project-header">
+        <div className="eyebrow">Project · {access.projectRole}</div>
+        <div className="project-header-row">
+          <h1 className="page-title">{project.name}</h1>
+          <span className="project-slug">{project.slug}</span>
+        </div>
+        {project.description ? <p className="page-description">{project.description}</p> : null}
+        <ProjectNav slug={project.slug} />
+      </header>
+      {children}
+    </>
   )
 }
