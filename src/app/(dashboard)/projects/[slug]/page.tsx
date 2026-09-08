@@ -4,7 +4,8 @@ import { getCurrentUser } from '@/lib/auth'
 import { getUserOrganization, getProjectBySlug, getServicesByProject } from '@/lib/queries'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Server, Cpu, Clock, Box } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Plus, Server, Cpu, Clock, Box } from 'lucide-react'
 import { CreateServiceDialog } from '@/components/create-service-dialog'
 
 const typeIcons: Record<string, React.ReactNode> = {

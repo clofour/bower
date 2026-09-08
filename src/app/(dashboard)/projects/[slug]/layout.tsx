@@ -23,14 +23,12 @@ export default async function ProjectLayout({
 
   return (
     <div className="space-y-6">
-      <div className="sticky top-16 z-20 -mx-4 border-b bg-background/95 px-4 pb-0 pt-2 backdrop-blur lg:top-0 lg:-mx-10 lg:px-10">
       <PageHeading
         eyebrow="Project"
         title={project.name}
         description={project.description ?? undefined}
       />
       <ProjectTabs slug={slug} />
-      </div>
       <div>{children}</div>
     </div>
   )
