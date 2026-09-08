@@ -9,11 +9,9 @@ import {
   getEnvironmentsByProject,
 } from '@/lib/queries'
 import { PageHeading } from '@/components/page-heading'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { StatusDot } from '@/components/status'
 import { EmptyState } from '@/components/ui/empty-state'
 import { CreateProjectDialog } from '@/components/create-project-dialog'
-import { Badge } from '@/components/ui/badge'
 import {
   Table,
   TableBody,
@@ -86,36 +84,14 @@ export default async function DashboardPage() {
               </Link>
             )}
           </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="divide-y border-y">
             {recentProjects.map((project) => {
               const data = projectData.find((d) => d.project.id === project.id)
               return (
-                <Link key={project.id} href={`/projects/${project.slug}`} className="group">
-                  <Card className="transition-shadow hover:shadow-md">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="text-base">{project.name}</CardTitle>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                      </div>
-                      {project.description && (
-                        <p className="line-clamp-1 text-sm text-muted-foreground">
-                          {project.description}
-                        </p>
-                      )}
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-3">
-                        <Badge variant="secondary">
-                          {data?.services.length ?? 0}{' '}
-                          {(data?.services.length ?? 0) === 1 ? 'service' : 'services'}
-                        </Badge>
-                        <Badge variant="secondary">
-                          {data?.environments.length ?? 0}{' '}
-                          {(data?.environments.length ?? 0) === 1 ? 'env' : 'envs'}
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
+                <Link key={project.id} href={`/projects/${project.slug}`} className="group grid gap-1 py-3 transition-colors hover:bg-muted/30 sm:grid-cols-[1fr_2fr_auto] sm:items-center sm:px-3">
+                  <span className="font-medium">{project.name}</span>
+                  <span className="truncate text-sm text-muted-foreground">{project.description || 'No description'}</span>
+                  <span className="flex items-center gap-4 text-xs tabular text-muted-foreground"><span>{data?.services.length ?? 0} services</span><span>{data?.environments.length ?? 0} environments</span><ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /></span>
                 </Link>
               )
             })}
@@ -127,7 +103,7 @@ export default async function DashboardPage() {
       {recentDeployments.length > 0 && (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold tracking-tight">Recent deployments</h2>
-          <Card>
+          <div className="overflow-hidden rounded-lg border bg-card">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -143,7 +119,7 @@ export default async function DashboardPage() {
                   <TableRow key={row.deployment.id}>
                     <TableCell className="font-medium">{row.serviceName}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{row.environmentName}</Badge>
+                      <span className="text-sm">{row.environmentName}</span>
                     </TableCell>
                     <TableCell>
                       <StatusDot status={row.deployment.status} />
@@ -163,7 +139,7 @@ export default async function DashboardPage() {
                 ))}
               </TableBody>
             </Table>
-          </Card>
+          </div>
         </div>
       )}
 
