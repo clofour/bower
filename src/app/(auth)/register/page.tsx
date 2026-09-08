@@ -16,9 +16,12 @@ export default function RegisterPage() {
     setError(null)
     setLoading(true)
     const formData = new FormData(e.currentTarget)
-    const result = await registerAction(formData)
-    if (result?.error) {
-      setError(result.error)
+    try {
+      const result = await registerAction(formData)
+      if (result?.error) setError(result.error)
+    } catch {
+      setError('Account creation could not be completed. Check your connection and try again.')
+    } finally {
       setLoading(false)
     }
   }
@@ -26,13 +29,14 @@ export default function RegisterPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight">Create account</h2>
-        <p className="text-sm text-muted-foreground">Enter your details and invite token to get started.</p>
+        <p className="text-xs font-semibold uppercase tracking-[.16em] text-primary">Join this control plane</p>
+        <h1 className="text-3xl font-semibold tracking-[-.03em]">Create your account</h1>
+        <p className="text-sm leading-6 text-muted-foreground">Use the instance administrator token for the first account, or an organization invitation thereafter.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
+          <div role="alert" id="register-error" className="rounded-md border border-destructive/25 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
         )}
         <div className="space-y-2">
           <Label htmlFor="name">Name</Label>
@@ -47,12 +51,14 @@ export default function RegisterPage() {
           <Input id="password" name="password" type="password" placeholder="Minimum 8 characters" autoComplete="new-password" required minLength={8} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="inviteToken">Invite token</Label>
-          <Input id="inviteToken" name="inviteToken" placeholder="Paste your invite token" required />
+          <Label htmlFor="inviteToken">Invitation or instance-admin token</Label>
+          <Input id="inviteToken" name="inviteToken" placeholder="Paste token" autoComplete="off" required aria-describedby="token-help" aria-invalid={!!error} />
+          <p id="token-help" className="text-xs leading-5 text-muted-foreground">Tokens are validated securely and are never shown again here.</p>
         </div>
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Creating account...' : 'Create account'}
+        <Button type="submit" className="w-full" disabled={loading} aria-disabled={loading}>
+          {loading ? 'Creating account…' : 'Create account'}
         </Button>
+        <p role="status" aria-live="polite" className="sr-only">{loading ? 'Creating your account' : ''}</p>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">

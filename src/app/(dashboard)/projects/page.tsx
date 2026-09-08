@@ -3,16 +3,9 @@ import Link from 'next/link'
 import { getCurrentUser } from '@/lib/auth'
 import { getUserOrganization, getProjectsForUser, getServicesByProject } from '@/lib/queries'
 import { PageHeading } from '@/components/page-heading'
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { FolderKanban, ArrowRight } from 'lucide-react'
+import { EmptyState } from '@/components/ui/empty-state'
+import { CreateProjectDialog } from '@/components/create-project-dialog'
+import { FolderKanban, ArrowUpRight } from 'lucide-react'
 
 export default async function ProjectsPage() {
   const user = await getCurrentUser()
@@ -35,61 +28,29 @@ export default async function ProjectsPage() {
   return (
     <div className="space-y-6">
       <PageHeading
+        eyebrow="Organization"
         title="Projects"
-        description="Manage your deployment projects"
-        actions={
-          <Button size="sm" disabled>
-            New project
-          </Button>
-        }
+        description={projectList.length ? `${projectList.length} project${projectList.length === 1 ? '' : 's'} available to you.` : 'Projects contain services and their deployment environments.'}
+        actions={projectList.length ? <CreateProjectDialog /> : undefined}
       />
 
       {projectList.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-            <FolderKanban className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <h3 className="mb-1 text-sm font-medium">No projects yet</h3>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Create your first project to start deploying services.
-          </p>
-          <Button size="sm" disabled>
-            New project
-          </Button>
-        </div>
+        <EmptyState icon={<FolderKanban className="h-5 w-5" />} title="Create the first project" description="Start with a project, then add environments and services when you are ready to deploy." action={<CreateProjectDialog prominent />} />
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="overflow-hidden rounded-lg border bg-card">
           {projectList.map((project) => (
-            <Link key={project.id} href={`/projects/${project.slug}`} className="group">
-              <Card className="h-full transition-shadow hover:shadow-md">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-base">{project.name}</CardTitle>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                  </div>
-                  {project.description && (
-                    <CardDescription className="line-clamp-2">
-                      {project.description}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <Badge variant="secondary">
-                      {serviceCountMap.get(project.id) ?? 0}{' '}
-                      {(serviceCountMap.get(project.id) ?? 0) === 1 ? 'service' : 'services'}
-                    </Badge>
-                    <span>
-                      Created{' '}
+            <Link key={project.id} href={`/projects/${project.slug}`} className="group grid gap-2 border-b px-4 py-4 transition-colors last:border-0 hover:bg-muted/35 sm:grid-cols-[minmax(12rem,1fr)_minmax(14rem,2fr)_8rem_10rem_1.5rem] sm:items-center">
+              <span className="font-medium">{project.name}</span>
+              <span className="truncate text-sm text-muted-foreground">{project.description || 'No description'}</span>
+              <span className="text-sm tabular text-muted-foreground">{serviceCountMap.get(project.id) ?? 0} {(serviceCountMap.get(project.id) ?? 0) === 1 ? 'service' : 'services'}</span>
+              <span className="text-xs text-muted-foreground">
                       {new Date(project.createdAt).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
                       })}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
+              </span>
+              <ArrowUpRight aria-hidden="true" className="hidden h-4 w-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 sm:block" />
             </Link>
           ))}
         </div>

@@ -6,7 +6,6 @@ import {
   getSecretsByProject,
   getEnvironmentsByProject,
 } from '@/lib/queries'
-import { setSecretAction, deleteSecretAction } from '@/lib/actions/operations'
 import {
   Table,
   TableHeader,

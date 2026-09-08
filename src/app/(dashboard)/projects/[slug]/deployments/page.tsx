@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
-import { getUserOrganization, getProjectBySlug, getDeploymentsByProject } from '@/lib/queries'
+import { getUserOrganization, getProjectBySlug, getDeploymentsByProject, getDeploymentEvents } from '@/lib/queries'
 import {
   Table,
   TableHeader,
@@ -13,7 +13,8 @@ import { Badge } from '@/components/ui/badge'
 import { StatusDot } from '@/components/status'
 import { DeploymentPoller } from '@/components/deployment-poller'
 import { Rocket } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
+import { cn } from '@/lib/utils'
 
 const activeStatuses = ['pending', 'planning', 'deploying']
 
@@ -52,42 +53,36 @@ export default async function DeploymentsPage({
   if (!project) redirect('/projects')
 
   const rows = await getDeploymentsByProject(project.id)
+  const events = await getDeploymentEvents(rows.map((row) => row.deployment.id))
   const hasActive = rows.some((r) =>
     activeStatuses.includes(r.deployment.status)
   )
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Deployment History</h2>
+      <div><h2 className="text-base font-semibold">Deployment history</h2><p className="mt-1 text-sm text-muted-foreground">Active and failed changes stay prominent; completed history remains compact.</p></div>
 
       <DeploymentPoller active={hasActive} />
 
       {rows.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Rocket className="h-10 w-10 text-muted-foreground mb-3" />
-            <h3 className="font-medium text-lg">No deployments yet</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Deploy a service to see its history here.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState icon={<Rocket className="h-5 w-5" />} title="No deployment history" description="Deploy a service from its overview. Plan changes and event history will appear here." />
       ) : (
-        <Table>
+        <div className="overflow-hidden rounded-lg border bg-card"><Table>
           <TableHeader>
             <TableRow>
               <TableHead>Status</TableHead>
               <TableHead>Service</TableHead>
               <TableHead>Environment</TableHead>
-              <TableHead>Image</TableHead>
+              <TableHead>Image change</TableHead>
               <TableHead>Triggered by</TableHead>
               <TableHead>Strategy</TableHead>
-              <TableHead>Time</TableHead>
+              <TableHead>Started / completed</TableHead>
+              <TableHead>Revision</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((row) => (
-              <TableRow key={row.deployment.id}>
+              <TableRow key={row.deployment.id} className={cn(activeStatuses.includes(row.deployment.status) && 'bg-warning/10 hover:bg-warning/15', ['failed', 'rolled_back'].includes(row.deployment.status) && 'bg-destructive/8 hover:bg-destructive/12')}>
                 <TableCell>
                   <StatusDot status={row.deployment.status} />
                 </TableCell>
@@ -96,7 +91,7 @@ export default async function DeploymentsPage({
                   <Badge variant="secondary">{row.environmentName}</Badge>
                 </TableCell>
                 <TableCell className="font-mono text-xs">
-                  {imageShort(row.deployment.imageAfter)}
+                  <span className="text-muted-foreground">{imageShort(row.deployment.imageBefore)}</span> → {imageShort(row.deployment.imageAfter)}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {row.userName ?? row.deployment.triggerType}
@@ -107,12 +102,13 @@ export default async function DeploymentsPage({
                   </Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
-                  {formatTime(row.deployment.createdAt)}
+                  <span className="block">{formatTime(row.deployment.startedAt)}</span><span className="block text-xs">{row.deployment.completedAt ? formatTime(row.deployment.completedAt) : 'In progress'}</span>
                 </TableCell>
+                <TableCell className="font-mono text-xs">{row.deployment.trellisRevision ?? '—'}<details className="mt-1"><summary className="cursor-pointer text-muted-foreground hover:text-foreground">Details</summary><div className="mt-3 min-w-72 space-y-3 text-left font-sans"><p className="text-xs"><span className="font-medium">Trigger:</span> {row.deployment.triggerType.replace(/_/g, ' ')}</p>{row.deployment.planDiff != null && <details><summary className="cursor-pointer text-xs font-medium">Plan diff</summary><pre className="mt-2 max-h-56 overflow-auto rounded bg-muted p-3 font-mono text-[11px]">{JSON.stringify(row.deployment.planDiff, null, 2)}</pre></details>}{row.deployment.jobSpec != null && <details><summary className="cursor-pointer text-xs font-medium">Job specification</summary><pre className="mt-2 max-h-56 overflow-auto rounded bg-muted p-3 font-mono text-[11px]">{JSON.stringify(row.deployment.jobSpec, null, 2)}</pre></details>}{events.filter((event) => event.deploymentId === row.deployment.id).length > 0 && <details><summary className="cursor-pointer text-xs font-medium">Events ({events.filter((event) => event.deploymentId === row.deployment.id).length})</summary><ol className="mt-2 space-y-2">{events.filter((event) => event.deploymentId === row.deployment.id).map((event) => <li key={event.id} className="border-l pl-3 text-xs"><span className="font-medium">{event.type}</span><p className="text-muted-foreground">{event.message}</p></li>)}</ol></details>}</div></details></TableCell>
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+        </Table></div>
       )}
     </div>
   )
