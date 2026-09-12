@@ -47,7 +47,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
             <div className="flex items-center gap-2">
               <Badge variant="secondary">{service.type}</Badge>
               <Link href={`/projects/${slug}/services/${serviceSlug}/revisions`}>
-                <Button variant="outline" size="sm">Revisions</Button>
+                <Button variant="default" size="sm">Revisions</Button>
               </Link>
             </div>
           }

@@ -38,7 +38,7 @@ export default async function ProjectsPage() {
         title="Projects"
         description="Manage your deployment projects"
         actions={
-          <Button size="sm" disabled>
+          <Button variant="primary" size="sm" disabled>
             New project
           </Button>
         }
@@ -53,7 +53,7 @@ export default async function ProjectsPage() {
           <p className="mb-4 text-sm text-ink-muted">
             Create your first project to start deploying services.
           </p>
-          <Button size="sm" disabled>
+          <Button variant="primary" size="sm" disabled>
             New project
           </Button>
         </div>

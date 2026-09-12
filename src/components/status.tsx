@@ -94,7 +94,7 @@ export function Meter({ value, tone = 'brand', label }: { value: number; tone?: 
         aria-label={`${label ?? 'Usage'} ${value}%`}
       >
         <div
-          className={cn('h-full rounded-full transition-[width] duration-300 ease-[cubic-bezier(0.25,1,0.5,1)]', toneDot[resolved])}
+          className={cn('h-full rounded-full transition-[width] duration-300 ease-move', toneDot[resolved])}
           style={{ width: `${Math.min(100, Math.max(2, value))}%` }}
         />
       </div>

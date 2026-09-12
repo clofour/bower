@@ -13,7 +13,7 @@ export function SecretActions({
 }) {
   return (
     <form action={deleteSecretAction.bind(null, projectId, secretId)}>
-      <Button variant="ghost" size="sm" type="submit" className="text-danger-600 hover:text-danger-600">
+      <Button variant="ghost" size="sm" type="submit" className="text-danger-500 hover:text-danger-500">
         <Trash2 className="h-3.5 w-3.5" />
       </Button>
     </form>

@@ -28,7 +28,7 @@ export default function LoginPage() {
     <div className="space-y-5">
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <p role="alert" className="text-xs leading-relaxed text-danger-600">
+          <p role="alert" className="text-xs leading-relaxed text-danger-500">
             {error}
           </p>
         )}
@@ -54,7 +54,7 @@ export default function LoginPage() {
             required
           />
         </div>
-        <Button type="submit" className="mt-1 w-full" size="lg" disabled={loading}>
+        <Button variant="primary" type="submit" className="mt-1 w-full" size="lg" disabled={loading}>
           {loading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />

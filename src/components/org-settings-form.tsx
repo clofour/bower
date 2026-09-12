@@ -47,8 +47,8 @@ export function OrgSettingsForm({ org }: OrgSettingsFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="rounded-md bg-danger-50 p-3 text-sm text-danger-600">{error}</div>}
-          {success && <div className="rounded-md bg-success/10 p-3 text-sm text-success">Settings updated.</div>}
+          {error && <div className="rounded-md bg-danger-50 p-3 text-sm text-danger-500">{error}</div>}
+          {success && <div className="rounded-md bg-brand-50 p-3 text-sm text-brand-700">Settings updated.</div>}
           <div className="space-y-2">
             <Label htmlFor="name">Organization name</Label>
             <Input id="name" name="name" defaultValue={org.name} required />
@@ -61,7 +61,7 @@ export function OrgSettingsForm({ org }: OrgSettingsFormProps) {
             <Label htmlFor="trellisApiToken">Trellis API Token</Label>
             <Input id="trellisApiToken" name="trellisApiToken" type="password" defaultValue={org.trellisApiToken} />
           </div>
-          <Button type="submit" disabled={loading}>
+          <Button variant="primary" type="submit" disabled={loading}>
             {loading ? 'Saving...' : 'Save changes'}
           </Button>
         </form>

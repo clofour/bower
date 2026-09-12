@@ -43,7 +43,7 @@ const DropdownMenuItem = React.forwardRef<
   React.ComponentRef<typeof DropdownMenuPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & { inset?: boolean }
 >(({ className, inset, ...props }, ref) => (
-  <DropdownMenuPrimitive.Item ref={ref} className={cn('relative flex cursor-default select-none items-center rounded-lg px-2 py-1.5 text-[13px] text-ink-soft outline-none transition-colors duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] focus:bg-brand-50 focus:text-ink data-[disabled]:pointer-events-none data-[disabled]:opacity-50', inset && 'pl-8', className)} {...props} />
+  <DropdownMenuPrimitive.Item ref={ref} className={cn('relative flex cursor-default select-none items-center rounded-lg px-2 py-1.5 text-[13px] text-ink-soft outline-none transition-colors duration-150 ease-enter focus:bg-brand-50 focus:text-ink data-[disabled]:pointer-events-none data-[disabled]:opacity-50', inset && 'pl-8', className)} {...props} />
 ))
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName
 

@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { createTeamAction, deleteTeamAction } from '@/lib/actions/operations'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogBody, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -37,7 +37,7 @@ function CreateTeamDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button variant="primary" size="sm">
           <Plus className="mr-1.5 h-4 w-4" />
           New team
         </Button>
@@ -46,15 +46,17 @@ function CreateTeamDialog() {
         <DialogHeader>
           <DialogTitle>Create team</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Team name</Label>
-            <Input id="name" name="name" placeholder="Engineering" required />
-          </div>
-          <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? 'Creating...' : 'Create team'}
-          </Button>
-        </form>
+        <DialogBody>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Team name</Label>
+              <Input id="name" name="name" placeholder="Engineering" required />
+            </div>
+            <Button variant="primary" type="submit" className="w-full" disabled={pending}>
+              {pending ? 'Creating...' : 'Create team'}
+            </Button>
+          </form>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   )
