@@ -15,7 +15,7 @@ import {
   Server,
   Building2,
   Users,
-  BookTemplate,
+
   ScrollText,
   UserCircle,
   LogOut,
@@ -36,7 +36,7 @@ const mainNav: NavItem[] = [
 const settingsNav: NavItem[] = [
   { label: 'Organization', href: '/settings/organization', icon: Building2 },
   { label: 'Teams', href: '/settings/teams', icon: Users },
-  { label: 'Templates', href: '/settings/templates', icon: BookTemplate },
+
   { label: 'Audit log', href: '/settings/audit', icon: ScrollText },
   { label: 'Account', href: '/settings/account', icon: UserCircle },
 ]

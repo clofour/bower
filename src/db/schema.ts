@@ -596,29 +596,6 @@ export const notificationChannels = pgTable("notification_channels", {
 });
 
 // ---------------------------------------------------------------------------
-// Templates
-// ---------------------------------------------------------------------------
-
-export const serviceTemplates = pgTable("service_templates", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  orgId: uuid("org_id").references(() => organizations.id, {
-    onDelete: "cascade",
-  }),
-  name: text("name").notNull(),
-  slug: text("slug").notNull(),
-  description: text("description"),
-  type: serviceTypeEnum("type").notNull(),
-  config: jsonb("config").notNull(),
-  isBuiltin: boolean("is_builtin").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
-
-// ---------------------------------------------------------------------------
 // Teams
 // ---------------------------------------------------------------------------
 

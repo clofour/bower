@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { db } from '@/db'
 import {
   environments, routes, secretsMetadata, services, teams, teamMemberships,
-  teamProjectAccess, users, serviceTemplates, projects, serviceConfigs,
+  teamProjectAccess, users, projects, serviceConfigs,
   sharedSecretGroups, sharedSecretMembers, organizationMembers,
 } from '@/db/schema'
 import { getTrellisClient } from '@/lib/trellis-instance'
@@ -295,26 +295,3 @@ export async function addOrganizationMemberAction(formData: FormData) {
   await recordAudit({ orgId: ctx.org.id, userId: ctx.user.id, action: 'organization.member.upserted', resourceType: 'organization', resourceId: ctx.org.id, details: { memberId: member.id, email, role } }); revalidatePath('/settings/teams')
 }
 
-export async function createTemplateAction(formData: FormData) {
-  const ctx = await requireContext()
-  if (ctx.role === 'member') throw new Error('Insufficient permissions.')
-  const name = text(formData, 'name')
-  const image = text(formData, 'image')
-  const type = text(formData, 'type') as 'web' | 'worker' | 'cron' | 'custom'
-  let extra: Record<string, unknown> = {}; const raw = text(formData, 'config')
-  if (raw) { try { extra = JSON.parse(raw) as Record<string, unknown> } catch { throw new Error('Template configuration must be valid JSON.') } }
-  if (!name || (!image && typeof extra.image !== 'string')) throw new Error('Name and image are required.')
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-  const [template] = await db.insert(serviceTemplates).values({ orgId: ctx.org.id, name, slug, type,
-    description: text(formData, 'description') || null,
-    config: { ...extra, image: image || extra.image, port: integer(formData, 'port', Number(extra.port ?? (type === 'web' ? 8080 : 0))), replicas: integer(formData, 'replicas', Number(extra.replicas ?? 1)) },
-  }).returning()
-  await recordAudit({ orgId: ctx.org.id, userId: ctx.user.id, action: 'template.created', resourceType: 'template', resourceId: template.id, details: { name } })
-  revalidatePath('/settings/templates')
-}
-
-export async function deleteTemplateAction(id: string) {
-  const ctx = await requireContext(); if (ctx.role === 'member') throw new Error('Insufficient permissions.')
-  await db.delete(serviceTemplates).where(and(eq(serviceTemplates.id, id), eq(serviceTemplates.orgId, ctx.org.id)))
-  await recordAudit({ orgId: ctx.org.id, userId: ctx.user.id, action: 'template.deleted', resourceType: 'template', resourceId: id }); revalidatePath('/settings/templates')
-}
