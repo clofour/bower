@@ -11,7 +11,7 @@ import {
   CardContent,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { CreateProjectDialog } from '@/components/create-project-dialog'
 import { FolderKanban, ArrowRight } from 'lucide-react'
 
 export default async function ProjectsPage() {
@@ -21,6 +21,7 @@ export default async function ProjectsPage() {
   const orgCtx = await getUserOrganization(user.id)
   if (!orgCtx) redirect('/login')
 
+  const clusterConfigured = Boolean(orgCtx.org.trellisApiUrl && orgCtx.org.trellisApiToken)
   const projectList = await getProjectsForUser(orgCtx.org.id, user.id, orgCtx.role)
 
   // Fetch service counts for each project in parallel
@@ -37,11 +38,7 @@ export default async function ProjectsPage() {
       <PageHeading
         title="Projects"
         description="Manage your deployment projects"
-        actions={
-          <Button variant="primary" size="sm" disabled>
-            New project
-          </Button>
-        }
+        actions={clusterConfigured ? <CreateProjectDialog /> : undefined}
       />
 
       {projectList.length === 0 ? (
@@ -51,11 +48,11 @@ export default async function ProjectsPage() {
           </div>
           <h3 className="mb-1 text-sm font-medium">No projects yet</h3>
           <p className="mb-4 text-sm text-ink-muted">
-            Create your first project to start deploying services.
+            {clusterConfigured
+              ? 'Create your first project to start deploying services.'
+              : 'Connect a Trellis cluster in Settings to start creating projects.'}
           </p>
-          <Button variant="primary" size="sm" disabled>
-            New project
-          </Button>
+          {clusterConfigured && <CreateProjectDialog />}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
