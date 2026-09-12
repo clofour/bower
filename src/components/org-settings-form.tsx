@@ -47,7 +47,7 @@ export function OrgSettingsForm({ org }: OrgSettingsFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
+          {error && <div className="rounded-md bg-danger-50 p-3 text-sm text-danger-600">{error}</div>}
           {success && <div className="rounded-md bg-success/10 p-3 text-sm text-success">Settings updated.</div>}
           <div className="space-y-2">
             <Label htmlFor="name">Organization name</Label>

@@ -34,8 +34,8 @@ export function ProjectTabs({ slug }: { slug: string }) {
             className={cn(
               'pb-2.5 pt-1 text-sm font-medium border-b-2 -mb-px transition-colors',
               isActive
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50'
+                ? 'border-brand-500 text-ink'
+                : 'border-transparent text-ink-muted hover:text-ink hover:border-ink-muted/50'
             )}
           >
             {tab.label}

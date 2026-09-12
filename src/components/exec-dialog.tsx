@@ -54,16 +54,16 @@ export function ExecDialog({ allocationId, serviceConfigId }: { allocationId: st
         {result && (
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Exit code:</span>
-              <span className={result.exit_code === 0 ? 'text-success' : 'text-destructive'}>
+              <span className="text-ink-muted">Exit code:</span>
+              <span className={result.exit_code === 0 ? 'text-success' : 'text-danger-600'}>
                 {result.exit_code}
               </span>
             </div>
             {result.stdout && (
-              <pre className="max-h-64 overflow-auto rounded-md bg-muted p-3 font-mono text-xs">{result.stdout}</pre>
+              <pre className="max-h-64 overflow-auto rounded-md bg-sunken p-3 font-mono text-xs">{result.stdout}</pre>
             )}
             {result.stderr && (
-              <pre className="max-h-64 overflow-auto rounded-md bg-destructive/10 p-3 font-mono text-xs text-destructive">{result.stderr}</pre>
+              <pre className="max-h-64 overflow-auto rounded-md bg-danger-50 p-3 font-mono text-xs text-danger-600">{result.stderr}</pre>
             )}
           </div>
         )}

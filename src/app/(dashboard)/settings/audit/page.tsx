@@ -22,8 +22,8 @@ export default async function AuditLogPage() {
       {entries.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <ScrollText className="h-10 w-10 text-muted-foreground/50" />
-            <p className="text-muted-foreground">No audit entries yet.</p>
+            <ScrollText className="h-10 w-10 text-ink-muted/50" />
+            <p className="text-ink-muted">No audit entries yet.</p>
           </CardContent>
         </Card>
       ) : (
@@ -41,7 +41,7 @@ export default async function AuditLogPage() {
             <TableBody>
               {entries.map((e) => (
                 <TableRow key={e.entry.id}>
-                  <TableCell className="whitespace-nowrap text-muted-foreground">
+                  <TableCell className="whitespace-nowrap text-ink-muted">
                     {new Date(e.entry.createdAt).toLocaleString()}
                   </TableCell>
                   <TableCell>{e.userName ?? 'System'}</TableCell>
@@ -51,7 +51,7 @@ export default async function AuditLogPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="capitalize">{e.entry.resourceType}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableCell className="font-mono text-xs text-ink-muted">
                     {e.entry.resourceId.slice(0, 8)}
                   </TableCell>
                 </TableRow>

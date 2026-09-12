@@ -61,7 +61,7 @@ export function ProjectSettingsForm({ project }: Props) {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
+            {error && <div className="rounded-md bg-danger-50 p-3 text-sm text-danger-600">{error}</div>}
             {success && <div className="rounded-md bg-success/10 p-3 text-sm text-success">Settings updated.</div>}
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
@@ -79,7 +79,7 @@ export function ProjectSettingsForm({ project }: Props) {
               <Label htmlFor="registryUrl">Registry URL</Label>
               <Input id="registryUrl" name="registryUrl" defaultValue={project.registryUrl ?? ''} />
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-ink-muted">
               Created {new Date(project.createdAt).toLocaleDateString()}
             </div>
             <Button type="submit" disabled={loading}>
@@ -93,10 +93,10 @@ export function ProjectSettingsForm({ project }: Props) {
 
       <Card className="border-destructive/30">
         <CardHeader>
-          <CardTitle className="text-base text-destructive">Danger zone</CardTitle>
+          <CardTitle className="text-base text-danger-600">Danger zone</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="mb-4 text-sm text-muted-foreground">
+          <p className="mb-4 text-sm text-ink-muted">
             Deleting a project removes all services, environments, deployments, and configurations permanently.
           </p>
           <AlertDialog>
@@ -115,7 +115,7 @@ export function ProjectSettingsForm({ project }: Props) {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                <AlertDialogAction onClick={handleDelete} className="bg-danger-500 text-white hover:bg-danger-500/90">
                   Delete
                 </AlertDialogAction>
               </AlertDialogFooter>

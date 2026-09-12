@@ -58,19 +58,19 @@ export default async function ClusterPage() {
 
       {error ? (
         <Card className="flex flex-col items-center justify-center py-16">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-            <Server className="h-6 w-6 text-muted-foreground" />
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-sunken">
+            <Server className="h-6 w-6 text-ink-muted" />
           </div>
           <h3 className="mb-1 text-sm font-medium">Unable to reach cluster</h3>
-          <p className="max-w-md text-center text-sm text-muted-foreground">{error}</p>
+          <p className="max-w-md text-center text-sm text-ink-muted">{error}</p>
         </Card>
       ) : nodes.length === 0 ? (
         <Card className="flex flex-col items-center justify-center py-16">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-            <Server className="h-6 w-6 text-muted-foreground" />
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-sunken">
+            <Server className="h-6 w-6 text-ink-muted" />
           </div>
           <h3 className="mb-1 text-sm font-medium">No nodes</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-ink-muted">
             No nodes are registered with the Trellis cluster.
           </p>
         </Card>
@@ -96,14 +96,14 @@ export default async function ClusterPage() {
                   <TableCell>
                     <StatusDot status={node.status} />
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableCell className="font-mono text-xs text-ink-muted">
                     {node.address}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="text-sm">{formatCpu(node.cpu)}</span>
                       {node.cpu_used !== undefined && (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-ink-muted">
                           {formatCpu(node.cpu_used)} used
                         </span>
                       )}
@@ -113,7 +113,7 @@ export default async function ClusterPage() {
                     <div className="flex flex-col">
                       <span className="text-sm">{formatBytes(node.memory)}</span>
                       {node.memory_used !== undefined && (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-ink-muted">
                           {formatBytes(node.memory_used)} used
                         </span>
                       )}
@@ -122,7 +122,7 @@ export default async function ClusterPage() {
                   <TableCell>
                     <Badge variant="outline">{node.arch}</Badge>
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
+                  <TableCell className="font-mono text-xs text-ink-muted">
                     {node.version}
                   </TableCell>
                   <TableCell className="text-right">
