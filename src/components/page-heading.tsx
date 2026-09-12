@@ -1,22 +1,36 @@
 import { cn } from '@/lib/utils'
 
 interface PageHeadingProps {
-  eyebrow?: string
-  title: string
+  eyebrow?: React.ReactNode
+  title: React.ReactNode
   description?: string
   actions?: React.ReactNode
+  meta?: React.ReactNode
   className?: string
 }
 
-export function PageHeading({ eyebrow, title, description, actions, className }: PageHeadingProps) {
+export function PageHeading({ eyebrow, title, description, actions, meta, className }: PageHeadingProps) {
   return (
-    <div className={cn('flex items-start justify-between gap-4', className)}>
-      <div className="space-y-1">
-        {eyebrow && <p className="text-sm font-medium text-muted-foreground">{eyebrow}</p>}
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {description && <p className="text-sm text-muted-foreground">{description}</p>}
+    <header className={cn('flex flex-wrap items-start justify-between gap-x-8 gap-y-4', className)}>
+      <div className="min-w-0 max-w-2xl">
+        {eyebrow ? <div className="mb-2 flex items-center gap-2">{eyebrow}</div> : null}
+        <h1 className="text-[26px] font-bold leading-tight tracking-tightest text-ink">{title}</h1>
+        {description ? (
+          <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft">{description}</p>
+        ) : null}
+        {meta ? <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">{meta}</div> : null}
       </div>
-      {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+    </header>
+  )
+}
+
+export function MetaItem({ icon, label, value }: { icon?: React.ReactNode; label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 text-[12.5px]">
+      {icon ? <span className="text-ink-faint">{icon}</span> : null}
+      <span className="text-ink-muted">{label}</span>
+      <span className="font-medium text-ink">{value}</span>
     </div>
   )
 }

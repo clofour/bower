@@ -1,34 +1,104 @@
 import { cn } from '@/lib/utils'
 
-const statusColors: Record<string, string> = {
-  healthy: 'bg-success',
-  running: 'bg-success',
-  deploying: 'bg-warning',
-  pending: 'bg-warning',
-  planning: 'bg-warning',
-  starting: 'bg-warning',
-  placed: 'bg-warning',
-  stopping: 'bg-muted-foreground',
-  stopped: 'bg-muted-foreground',
-  completed: 'bg-muted-foreground',
-  dead: 'bg-muted-foreground',
-  draining: 'bg-warning',
-  failed: 'bg-destructive',
-  rolled_back: 'bg-destructive',
-  lost: 'bg-destructive',
-  unhealthy: 'bg-destructive',
-  unknown: 'bg-muted-foreground',
-  error: 'bg-destructive',
+export type Tone = 'brand' | 'warn' | 'danger' | 'info' | 'neutral'
+
+const toneChip: Record<Tone, string> = {
+  brand: 'bg-brand-50 text-brand-700 border-brand-100',
+  warn: 'bg-warn-50 text-warn-500 border-warn-200',
+  danger: 'bg-danger-50 text-danger-500 border-danger-200',
+  info: 'bg-info-50 text-info-500 border-info-200',
+  neutral: 'bg-sunken text-ink-soft border-line',
+}
+
+const toneDot: Record<Tone, string> = {
+  brand: 'bg-brand-500',
+  warn: 'bg-warn-500',
+  danger: 'bg-danger-500',
+  info: 'bg-info-500',
+  neutral: 'bg-ink-faint',
+}
+
+const statusTone: Record<string, Tone> = {
+  healthy: 'brand',
+  running: 'brand',
+  deploying: 'warn',
+  pending: 'neutral',
+  planning: 'neutral',
+  starting: 'warn',
+  placed: 'warn',
+  stopping: 'neutral',
+  stopped: 'neutral',
+  completed: 'neutral',
+  dead: 'neutral',
+  draining: 'warn',
+  failed: 'danger',
+  rolled_back: 'info',
+  'rolled-back': 'info',
+  lost: 'danger',
+  unhealthy: 'danger',
+  unknown: 'neutral',
+  error: 'danger',
+  degraded: 'warn',
+  never: 'neutral',
+}
+
+const pulsingStatuses = new Set(['deploying', 'pending', 'planning', 'starting', 'placed', 'draining'])
+
+export function Dot({ tone = 'neutral', pulse }: { tone?: Tone; pulse?: boolean }) {
+  return (
+    <span className="relative inline-flex h-1.5 w-1.5 shrink-0">
+      {pulse ? (
+        <span
+          className={cn('absolute inset-0 animate-ping rounded-full opacity-60', toneDot[tone])}
+          style={{ animationDuration: '1.6s' }}
+        />
+      ) : null}
+      <span className={cn('relative h-1.5 w-1.5 rounded-full', toneDot[tone])} />
+    </span>
+  )
+}
+
+export function Chip({ tone = 'neutral', children, className }: { tone?: Tone; children: React.ReactNode; className?: string }) {
+  return (
+    <span className={cn('inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-2xs font-medium', toneChip[tone], className)}>
+      {children}
+    </span>
+  )
 }
 
 export function StatusDot({ status, className }: { status: string; className?: string }) {
-  const color = statusColors[status] ?? 'bg-muted-foreground'
-  const pulse = ['deploying', 'pending', 'planning', 'starting', 'placed', 'draining'].includes(status)
+  const tone = statusTone[status] ?? 'neutral'
+  const pulse = pulsingStatuses.has(status)
 
   return (
-    <span className={cn('inline-flex items-center gap-1.5', className)}>
-      <span className={cn('inline-block h-2 w-2 rounded-full', color, pulse && 'animate-pulse')} />
-      <span className="text-sm capitalize">{status.replace(/_/g, ' ')}</span>
-    </span>
+    <Chip tone={tone} className={className}>
+      <Dot tone={tone} pulse={pulse} />
+      <span className="capitalize">{status.replace(/_/g, ' ')}</span>
+    </Chip>
+  )
+}
+
+export function Mono({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <span className={cn('font-mono text-[12.5px] text-ink-soft', className)}>{children}</span>
+  )
+}
+
+export function Meter({ value, tone = 'brand', label }: { value: number; tone?: Tone; label?: string }) {
+  const resolved: Tone = tone === 'brand' && value >= 85 ? 'danger' : tone === 'brand' && value >= 70 ? 'warn' : tone
+  return (
+    <div className="flex items-center gap-2">
+      <div
+        className="h-1.5 w-full max-w-[88px] overflow-hidden rounded-full bg-line"
+        role="img"
+        aria-label={`${label ?? 'Usage'} ${value}%`}
+      >
+        <div
+          className={cn('h-full rounded-full transition-[width] duration-300 ease-[cubic-bezier(0.25,1,0.5,1)]', toneDot[resolved])}
+          style={{ width: `${Math.min(100, Math.max(2, value))}%` }}
+        />
+      </div>
+      <span className="nums w-8 shrink-0 text-right text-xs text-ink-muted">{value}%</span>
+    </div>
   )
 }
