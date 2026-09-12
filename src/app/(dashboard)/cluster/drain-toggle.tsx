@@ -20,7 +20,7 @@ export function DrainToggle({ nodeId, drain }: DrainToggleProps) {
 
   return (
     <Button
-      variant={drain ? 'destructive' : 'outline'}
+      variant={drain ? 'danger' : 'default'}
       size="sm"
       onClick={handleClick}
       disabled={isPending}

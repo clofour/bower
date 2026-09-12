@@ -11,6 +11,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogBody,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -51,9 +52,9 @@ interface InviteTokensSectionProps {
   role: string
 }
 
-function tokenStatus(token: TokenRow['token']): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'success' } {
+function tokenStatus(token: TokenRow['token']): { label: string; variant: 'default' | 'secondary' | 'danger' | 'success' } {
   if (token.usedAt) return { label: 'Used', variant: 'secondary' }
-  if (token.expiresAt && new Date(token.expiresAt) < new Date()) return { label: 'Expired', variant: 'destructive' }
+  if (token.expiresAt && new Date(token.expiresAt) < new Date()) return { label: 'Expired', variant: 'danger' }
   return { label: 'Active', variant: 'success' }
 }
 
@@ -111,7 +112,7 @@ export function InviteTokensSection({ tokens, role }: InviteTokensSectionProps) 
         {isAdmin && (
           <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); else setOpen(true) }}>
             <DialogTrigger asChild>
-              <Button size="sm">
+              <Button variant="primary" size="sm">
                 <Plus className="h-4 w-4 mr-1" />
                 Create Token
               </Button>
@@ -124,50 +125,54 @@ export function InviteTokensSection({ tokens, role }: InviteTokensSectionProps) 
                 </DialogDescription>
               </DialogHeader>
               {createdToken ? (
-                <div className="space-y-3">
-                  <p className="text-sm font-medium">Token created successfully. Copy it now -- it will not be shown again.</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 rounded bg-sunken px-3 py-2 text-sm font-mono break-all">
-                      {createdToken}
-                    </code>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => navigator.clipboard.writeText(createdToken)}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
+                <DialogBody>
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Token created successfully. Copy it now -- it will not be shown again.</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 rounded bg-sunken px-3 py-2 text-sm font-mono break-all">
+                        {createdToken}
+                      </code>
+                      <Button
+                        variant="default"
+                        size="icon"
+                        onClick={() => navigator.clipboard.writeText(createdToken)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <DialogFooter>
-                    <Button onClick={handleClose}>Done</Button>
+                  <DialogFooter className="mt-4 border-t-0 bg-transparent px-0 py-0">
+                    <Button variant="primary" onClick={handleClose}>Done</Button>
                   </DialogFooter>
-                </div>
+                </DialogBody>
               ) : (
-                <form onSubmit={handleCreate} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="invite-role">Role</Label>
-                    <Select value={selectedRole} onValueChange={setSelectedRole}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="member">Member</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        {role === 'owner' && <SelectItem value="owner">Owner</SelectItem>}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="note">Note (optional)</Label>
-                    <Input id="note" name="note" placeholder="e.g. For new hire Jane" />
-                  </div>
-                  {error && <p className="text-sm text-danger-600">{error}</p>}
-                  <DialogFooter>
-                    <Button type="submit" disabled={loading}>
-                      {loading ? 'Creating...' : 'Create Token'}
-                    </Button>
-                  </DialogFooter>
-                </form>
+                <DialogBody>
+                  <form onSubmit={handleCreate} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="invite-role">Role</Label>
+                      <Select value={selectedRole} onValueChange={setSelectedRole}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="member">Member</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          {role === 'owner' && <SelectItem value="owner">Owner</SelectItem>}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="note">Note (optional)</Label>
+                      <Input id="note" name="note" placeholder="e.g. For new hire Jane" />
+                    </div>
+                    {error && <p className="text-sm text-danger-500">{error}</p>}
+                    <DialogFooter className="border-t-0 bg-transparent px-0 py-0">
+                      <Button variant="primary" type="submit" disabled={loading}>
+                        {loading ? 'Creating...' : 'Create Token'}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogBody>
               )}
             </DialogContent>
           </Dialog>
@@ -215,7 +220,7 @@ export function InviteTokensSection({ tokens, role }: InviteTokensSectionProps) 
                           onClick={() => handleRevoke(row.token.id)}
                           disabled={revoking === row.token.id}
                         >
-                          <Trash2 className="h-4 w-4 text-danger-600" />
+                          <Trash2 className="h-4 w-4 text-danger-500" />
                         </Button>
                       )}
                     </TableCell>

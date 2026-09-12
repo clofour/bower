@@ -61,8 +61,8 @@ export function ProjectSettingsForm({ project }: Props) {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <div className="rounded-md bg-danger-50 p-3 text-sm text-danger-600">{error}</div>}
-            {success && <div className="rounded-md bg-success/10 p-3 text-sm text-success">Settings updated.</div>}
+            {error && <div className="rounded-md bg-danger-50 p-3 text-sm text-danger-500">{error}</div>}
+            {success && <div className="rounded-md bg-brand-50 p-3 text-sm text-brand-700">Settings updated.</div>}
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input id="name" name="name" defaultValue={project.name} required />
@@ -82,7 +82,7 @@ export function ProjectSettingsForm({ project }: Props) {
             <div className="text-xs text-ink-muted">
               Created {new Date(project.createdAt).toLocaleDateString()}
             </div>
-            <Button type="submit" disabled={loading}>
+            <Button variant="primary" type="submit" disabled={loading}>
               {loading ? 'Saving...' : 'Save changes'}
             </Button>
           </form>
@@ -91,9 +91,9 @@ export function ProjectSettingsForm({ project }: Props) {
 
       <Separator />
 
-      <Card className="border-destructive/30">
+      <Card className="border-danger-200">
         <CardHeader>
-          <CardTitle className="text-base text-danger-600">Danger zone</CardTitle>
+          <CardTitle className="text-base text-danger-500">Danger zone</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="mb-4 text-sm text-ink-muted">
@@ -101,7 +101,7 @@ export function ProjectSettingsForm({ project }: Props) {
           </p>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm" disabled={deleting}>
+              <Button variant="danger" size="sm" disabled={deleting}>
                 <Trash2 className="mr-1.5 h-3.5 w-3.5" />
                 Delete project
               </Button>

@@ -19,7 +19,7 @@ export function ServiceActions({ serviceId, environmentId, isLocked }: ServiceAc
   return (
     <div className="flex items-center gap-2">
       <Button
-        variant="outline"
+        variant="default"
         size="sm"
         disabled={isLocked || restarting}
         onClick={() => startRestart(() => restartServiceAction(serviceId, environmentId))}
@@ -28,6 +28,7 @@ export function ServiceActions({ serviceId, environmentId, isLocked }: ServiceAc
         Restart
       </Button>
       <Button
+        variant="primary"
         size="sm"
         disabled={isLocked || deploying}
         onClick={() => startDeploy(() => deployServiceAction(serviceId, environmentId))}

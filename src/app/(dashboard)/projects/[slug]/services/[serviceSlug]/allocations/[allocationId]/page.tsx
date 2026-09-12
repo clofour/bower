@@ -128,9 +128,9 @@ export default async function AllocationDetailPage({
           {stderr && (
             <div>
               <div className="mb-1 flex items-center gap-2">
-                <Badge variant="destructive">stderr</Badge>
+                <Badge variant="danger">stderr</Badge>
               </div>
-              <pre className="max-h-96 overflow-auto rounded-md bg-danger-50 p-4 font-mono text-xs leading-relaxed text-danger-600">
+              <pre className="max-h-96 overflow-auto rounded-md bg-danger-50 p-4 font-mono text-xs leading-relaxed text-danger-500">
                 {stderr}
               </pre>
             </div>

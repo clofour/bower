@@ -4,25 +4,24 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:ring-offset-1 focus-visible:ring-offset-canvas disabled:pointer-events-none disabled:opacity-45 active:translate-y-px [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-enter focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:ring-offset-1 focus-visible:ring-offset-canvas disabled:pointer-events-none disabled:opacity-45 active:translate-y-px [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
-        default: 'bg-brand-500 text-white shadow-card hover:bg-brand-600',
-        destructive: 'bg-surface text-danger-500 border border-danger-200 hover:bg-danger-50',
-        outline: 'bg-surface text-ink border border-line shadow-card hover:border-line-strong hover:bg-sunken',
-        secondary: 'bg-surface text-ink border border-line shadow-card hover:border-line-strong hover:bg-sunken',
+        primary: 'bg-brand-500 text-white shadow-card hover:bg-brand-600',
+        default: 'bg-surface text-ink border border-line shadow-card hover:border-line-strong hover:bg-sunken',
         ghost: 'text-ink-soft hover:bg-black/[0.04] hover:text-ink',
+        danger: 'bg-surface text-danger-500 border border-danger-200 hover:bg-danger-50',
         link: 'text-brand-500 underline-offset-4 hover:underline',
       },
       size: {
-        default: 'h-9 px-3.5 text-sm',
         sm: 'h-8 px-2.5 text-[13px]',
+        md: 'h-9 px-3.5 text-sm',
         lg: 'h-11 px-5 text-sm',
         icon: 'h-8 w-8',
       },
     },
-    defaultVariants: { variant: 'default', size: 'default' },
+    defaultVariants: { variant: 'default', size: 'md' },
   },
 )
 
@@ -52,7 +51,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
       aria-label={label}
       title={label}
       className={cn(
-        'inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted transition-[background-color,color] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-black/[0.04] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300',
+        'inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted transition-[background-color,color] duration-150 ease-enter hover:bg-black/[0.04] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300',
         className,
       )}
       {...props}

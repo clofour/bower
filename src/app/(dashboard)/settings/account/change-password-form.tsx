@@ -42,8 +42,8 @@ export function ChangePasswordForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="rounded-md bg-danger-50 p-3 text-sm text-danger-600">{error}</div>}
-          {success && <div className="rounded-md bg-success/10 p-3 text-sm text-success">Password updated.</div>}
+          {error && <div className="rounded-md bg-danger-50 p-3 text-sm text-danger-500">{error}</div>}
+          {success && <div className="rounded-md bg-brand-50 p-3 text-sm text-brand-700">Password updated.</div>}
           <div className="space-y-2">
             <Label htmlFor="currentPassword">Current password</Label>
             <Input id="currentPassword" name="currentPassword" type="password" required />
@@ -56,7 +56,7 @@ export function ChangePasswordForm() {
             <Label htmlFor="confirmPassword">Confirm new password</Label>
             <Input id="confirmPassword" name="confirmPassword" type="password" required minLength={8} />
           </div>
-          <Button type="submit" disabled={loading}>
+          <Button variant="primary" type="submit" disabled={loading}>
             {loading ? 'Updating...' : 'Update password'}
           </Button>
         </form>

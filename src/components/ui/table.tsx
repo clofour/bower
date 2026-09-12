@@ -11,7 +11,7 @@ const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableE
 Table.displayName = 'Table'
 
 const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(
-  ({ className, ...props }, ref) => <thead ref={ref} className={cn('[&_tr]:border-b', className)} {...props} />,
+  ({ className, ...props }, ref) => <thead ref={ref} className={cn(className)} {...props} />,
 )
 TableHeader.displayName = 'TableHeader'
 
@@ -21,20 +21,20 @@ const TableBody = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes
 TableBody.displayName = 'TableBody'
 
 const TableFooter = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(
-  ({ className, ...props }, ref) => <tfoot ref={ref} className={cn('border-t bg-sunken font-medium [&>tr]:last:border-b-0', className)} {...props} />,
+  ({ className, ...props }, ref) => <tfoot ref={ref} className={cn('border-t border-line bg-sunken font-medium [&>tr]:last:border-b-0', className)} {...props} />,
 )
 TableFooter.displayName = 'TableFooter'
 
-const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTMLTableRowElement>>(
-  ({ className, ...props }, ref) => (
-    <tr ref={ref} className={cn('border-b border-line last:[&>td]:border-b-0 transition-colors duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-sunken data-[state=selected]:bg-brand-50', className)} {...props} />
+const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTMLTableRowElement> & { interactive?: boolean }>(
+  ({ className, interactive, ...props }, ref) => (
+    <tr ref={ref} className={cn('border-b border-line last:[&>td]:border-b-0 transition-colors duration-150 ease-enter', interactive && 'cursor-pointer hover:bg-sunken', className)} {...props} />
   ),
 )
 TableRow.displayName = 'TableRow'
 
 const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
-    <th ref={ref} className={cn('border-b border-line bg-sunken px-4 py-2 text-left align-middle text-2xs font-semibold uppercase tracking-wide text-ink-muted [&:has([role=checkbox])]:pr-0', className)} {...props} />
+    <th ref={ref} scope="col" className={cn('border-b border-line bg-sunken px-4 py-2 text-left align-middle text-2xs font-semibold uppercase tracking-wide text-ink-muted [&:has([role=checkbox])]:pr-0', className)} {...props} />
   ),
 )
 TableHead.displayName = 'TableHead'

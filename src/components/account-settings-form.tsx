@@ -45,8 +45,8 @@ export function AccountSettingsForm({ user }: AccountSettingsFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="rounded-md bg-danger-50 p-3 text-sm text-danger-600">{error}</div>}
-          {success && <div className="rounded-md bg-success/10 p-3 text-sm text-success">Account updated.</div>}
+          {error && <div className="rounded-md bg-danger-50 p-3 text-sm text-danger-500">{error}</div>}
+          {success && <div className="rounded-md bg-brand-50 p-3 text-sm text-brand-700">Account updated.</div>}
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
             <Input id="name" name="name" defaultValue={user.name} required />
@@ -60,7 +60,7 @@ export function AccountSettingsForm({ user }: AccountSettingsFormProps) {
             <Label htmlFor="avatarUrl">Avatar URL</Label>
             <Input id="avatarUrl" name="avatarUrl" defaultValue={user.avatarUrl ?? ''} placeholder="https://example.com/avatar.png" />
           </div>
-          <Button type="submit" disabled={loading}>
+          <Button variant="primary" type="submit" disabled={loading}>
             {loading ? 'Saving...' : 'Save changes'}
           </Button>
         </form>

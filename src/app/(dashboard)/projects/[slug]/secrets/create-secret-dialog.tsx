@@ -7,6 +7,7 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
+  DialogBody,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
@@ -39,7 +40,7 @@ export function CreateSecretDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button variant="primary" size="sm">
           <Plus className="h-4 w-4 mr-1" />
           Add Secret
         </Button>
@@ -48,61 +49,62 @@ export function CreateSecretDialog({
         <DialogHeader>
           <DialogTitle>Add Secret</DialogTitle>
         </DialogHeader>
-        <form action={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="environmentId">Environment</Label>
-            <Select name="environmentId" required>
-              <SelectTrigger>
-                <SelectValue placeholder="Select environment" />
-              </SelectTrigger>
-              <SelectContent>
-                {environments.map((env) => (
-                  <SelectItem key={env.id} value={env.id}>
-                    {env.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              name="name"
-              placeholder="MY_SECRET_KEY"
-              required
-              className="font-mono"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="value">Value</Label>
-            <Textarea
-              id="value"
-              name="value"
-              placeholder="Secret value"
-              required
-              rows={3}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="sharedName">Shared Group (optional)</Label>
-            <Input
-              id="sharedName"
-              name="sharedName"
-              placeholder="e.g. database-credentials"
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit">Save Secret</Button>
-          </div>
-        </form>
+        <DialogBody>
+          <form action={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="environmentId">Environment</Label>
+              <Select name="environmentId" required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select environment" />
+                </SelectTrigger>
+                <SelectContent>
+                  {environments.map((env) => (
+                    <SelectItem key={env.id} value={env.id}>
+                      {env.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                name="name"
+                placeholder="MY_SECRET_KEY"
+                required
+                className="font-mono"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="value">Value</Label>
+              <Textarea
+                id="value"
+                name="value"
+                placeholder="Secret value"
+                required
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sharedName">Shared Group (optional)</Label>
+              <Input
+                id="sharedName"
+                name="sharedName"
+                placeholder="e.g. database-credentials"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit">Save Secret</Button>
+            </div>
+          </form>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   )

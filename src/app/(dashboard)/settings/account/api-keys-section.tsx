@@ -5,7 +5,7 @@ import { createApiKeyAction, revokeApiKeyAction } from '@/lib/actions/settings'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogBody, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -55,7 +55,7 @@ export function ApiKeysSection({ keys }: { keys: ApiKey[] }) {
         <CardTitle className="text-base">API Keys</CardTitle>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setNewKey(null); setError(null) } }}>
           <DialogTrigger asChild>
-            <Button size="sm">
+            <Button variant="primary" size="sm">
               <Plus className="mr-1.5 h-4 w-4" />
               New key
             </Button>
@@ -64,29 +64,31 @@ export function ApiKeysSection({ keys }: { keys: ApiKey[] }) {
             <DialogHeader>
               <DialogTitle>Create API key</DialogTitle>
             </DialogHeader>
-            {newKey ? (
-              <div className="space-y-3">
-                <p className="text-sm text-ink-muted">Copy this key now. It will not be shown again.</p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 rounded-md bg-sunken px-3 py-2 font-mono text-xs break-all">{newKey}</code>
-                  <Button variant="outline" size="icon" onClick={handleCopy}>
-                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            <DialogBody>
+              {newKey ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-ink-muted">Copy this key now. It will not be shown again.</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 rounded-md bg-sunken px-3 py-2 font-mono text-xs break-all">{newKey}</code>
+                    <Button variant="default" size="icon" onClick={handleCopy}>
+                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <Button variant="primary" className="w-full" onClick={() => { setOpen(false); setNewKey(null) }}>Done</Button>
+                </div>
+              ) : (
+                <form onSubmit={handleCreate} className="space-y-4">
+                  {error && <div className="rounded-md bg-danger-50 p-3 text-sm text-danger-500">{error}</div>}
+                  <div className="space-y-2">
+                    <Label htmlFor="keyName">Name</Label>
+                    <Input id="keyName" name="name" placeholder="CI deploy key" required />
+                  </div>
+                  <Button variant="primary" type="submit" className="w-full" disabled={loading}>
+                    {loading ? 'Creating...' : 'Create key'}
                   </Button>
-                </div>
-                <Button className="w-full" onClick={() => { setOpen(false); setNewKey(null) }}>Done</Button>
-              </div>
-            ) : (
-              <form onSubmit={handleCreate} className="space-y-4">
-                {error && <div className="rounded-md bg-danger-50 p-3 text-sm text-danger-600">{error}</div>}
-                <div className="space-y-2">
-                  <Label htmlFor="keyName">Name</Label>
-                  <Input id="keyName" name="name" placeholder="CI deploy key" required />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Creating...' : 'Create key'}
-                </Button>
-              </form>
-            )}
+                </form>
+              )}
+            </DialogBody>
           </DialogContent>
         </Dialog>
       </CardHeader>
