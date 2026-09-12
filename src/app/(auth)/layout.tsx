@@ -3,33 +3,36 @@ import { GrowingTrellis } from '@/components/growing-trellis'
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative flex min-h-screen w-full flex-col overflow-hidden bg-background">
-      <GrowingTrellis className="absolute inset-x-0 bottom-0 h-[62%] w-full" />
+    <div className="min-h-screen w-full bg-canvas lg:grid lg:grid-cols-[57fr_43fr]">
+      {/* Left — dark panel with vine trellis */}
+      <section
+        className="relative flex h-56 flex-col justify-between overflow-hidden px-6 py-6 sm:h-64 sm:px-10 sm:py-8 lg:h-auto lg:min-h-screen lg:px-12 lg:py-10"
+        style={
+          {
+            backgroundColor: '#0b1915',
+            '--ink': 'hsl(167 33% 95%)',
+            '--ink-muted': 'hsl(170 20% 60%)',
+            '--brand-500': 'hsl(172 52% 36%)',
+          } as React.CSSProperties
+        }
+      >
+        <GrowingTrellis className="absolute inset-0 h-full w-full" />
+        <div className="relative">
+          <Brand size="default" />
+        </div>
+        <p className="relative hidden text-xs text-ink-muted lg:block">
+          bower &middot; deployment platform for Trellis
+        </p>
+      </section>
 
-      <div className="relative z-10 flex flex-1 items-center justify-center px-6 py-12">
-        <div className="grid w-full max-w-5xl items-center gap-12 lg:grid-cols-[1fr_380px] lg:gap-20">
-          {/* Left — branding */}
-          <div className="max-w-md">
-            <Brand size="default" />
-            <h1 className="mt-10 text-[40px] font-bold leading-[1.05] tracking-tightest">
-              Welcome <span className="italic text-primary">back</span>.
-            </h1>
-            <p className="mt-4 text-[14px] leading-relaxed text-muted-foreground">
-              Projects, environments, and deployments for your Trellis cluster.
-              Scheduling stays with Trellis — Bower owns the platform layer above it.
-            </p>
-          </div>
-
-          {/* Right — form card */}
+      {/* Right — auth form */}
+      <section className="flex items-center justify-center px-6 py-14 sm:px-10 lg:min-h-screen lg:px-12 lg:py-10 xl:px-16">
+        <div className="w-full max-w-[368px]">
           <div className="rounded-2xl border border-border bg-card p-6 shadow-raised">
             {children}
           </div>
         </div>
-      </div>
-
-      <footer className="relative z-10 flex flex-wrap items-center justify-between gap-3 px-6 pb-6 text-xs text-muted-foreground">
-        <span>Bower &middot; deployment platform for Trellis</span>
-      </footer>
+      </section>
     </div>
   )
 }
