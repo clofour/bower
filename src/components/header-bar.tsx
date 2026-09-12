@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { Search } from 'lucide-react'
+import { ChevronRight, Search } from 'lucide-react'
 import { CommandPalette } from '@/components/command-palette'
+import { OrgTeamPicker } from '@/components/org-team-picker'
 
 const titleMap: Record<string, string> = {
   '/dashboard': 'Overview',
@@ -25,7 +26,22 @@ function deriveTitle(pathname: string) {
   return last.charAt(0).toUpperCase() + last.slice(1).replace(/-/g, ' ')
 }
 
+interface OrgEntry {
+  id: string
+  name: string
+  slug: string
+  role: string
+}
+
+interface TeamEntry {
+  id: string
+  name: string
+}
+
 interface HeaderBarProps {
+  orgs: OrgEntry[]
+  currentOrg: OrgEntry
+  teams: TeamEntry[]
   searchData: {
     projects: { id: string; name: string; slug: string; teamName?: string }[]
     services: { id: string; name: string; slug: string; type: string; projectName: string; projectSlug: string }[]
@@ -33,7 +49,7 @@ interface HeaderBarProps {
   }
 }
 
-export function HeaderBar({ searchData }: HeaderBarProps) {
+export function HeaderBar({ orgs, currentOrg, teams, searchData }: HeaderBarProps) {
   const pathname = usePathname()
   const title = deriveTitle(pathname)
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -52,9 +68,13 @@ export function HeaderBar({ searchData }: HeaderBarProps) {
   return (
     <>
       <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-line bg-canvas/85 px-6 backdrop-blur-md">
-        <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">
-          {title}
-        </span>
+        <div className="flex min-w-0 flex-1 items-center gap-1">
+          <OrgTeamPicker orgs={orgs} currentOrg={currentOrg} teams={teams} />
+          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
+          <span className="min-w-0 truncate text-[13px] font-semibold text-ink">
+            {title}
+          </span>
+        </div>
 
         <button
           type="button"

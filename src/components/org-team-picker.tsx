@@ -50,24 +50,15 @@ export function OrgTeamPicker({ orgs, currentOrg, teams }: OrgTeamPickerProps) {
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger
         className={cn(
-          'flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm transition-colors',
-          'hover:bg-sidebar-accent/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+          'flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-[13px] font-medium text-ink transition-colors',
+          'hover:bg-black/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300',
           isPending && 'opacity-60',
         )}
         disabled={isPending}
       >
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-          <Building2 className="h-3.5 w-3.5" />
-        </div>
-        <div className="flex-1 truncate">
-          <p className="truncate text-sm font-medium text-sidebar-foreground">{currentOrg.name}</p>
-          {teams.length > 0 && (
-            <p className="truncate text-xs text-sidebar-muted">
-              {teams.length} {teams.length === 1 ? 'team' : 'teams'}
-            </p>
-          )}
-        </div>
-        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-sidebar-muted" />
+        <Building2 className="h-3.5 w-3.5 shrink-0 text-ink-muted" />
+        <span className="max-w-[160px] truncate">{currentOrg.name}</span>
+        <ChevronsUpDown className="h-3 w-3 shrink-0 text-ink-faint" />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="start" className="w-[220px]" sideOffset={6}>
