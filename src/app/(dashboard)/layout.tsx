@@ -2,7 +2,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { ORG_COOKIE_NAME } from '@/lib/constants'
-import { getUserOrganizations, getUserOrganization, getUserTeams } from '@/lib/queries'
+import { getUserOrganizations, getUserOrganization, getUserTeams, getProjectsForUser, getServicesForOrg } from '@/lib/queries'
 import { Sidebar } from '@/components/sidebar'
 import { HeaderBar } from '@/components/header-bar'
 import { Toaster } from '@/components/ui/toaster'
@@ -25,6 +25,8 @@ export default async function DashboardLayout({
   if (!orgCtx) redirect('/login')
 
   const teams = await getUserTeams(user.id, orgCtx.org.id)
+  const userProjects = await getProjectsForUser(orgCtx.org.id, user.id, orgCtx.role as 'owner' | 'admin' | 'member')
+  const orgServices = await getServicesForOrg(orgCtx.org.id)
 
   const orgs = allOrgs.map((entry) => ({
     id: entry.org.id,
@@ -53,7 +55,25 @@ export default async function DashboardLayout({
         teams={teams}
       />
       <div className="ml-[236px] flex min-w-0 flex-1 flex-col">
-        <HeaderBar />
+        <HeaderBar
+          searchData={{
+            projects: userProjects.map((p) => ({
+              id: p.id,
+              name: p.name,
+              slug: p.slug,
+              teamName: teams.find((t) => t.id === p.owningTeamId)?.name,
+            })),
+            services: orgServices.map(({ service, project }) => ({
+              id: service.id,
+              name: service.name,
+              slug: service.slug,
+              type: service.type,
+              projectName: project.name,
+              projectSlug: project.slug,
+            })),
+            orgName: orgCtx.org.name,
+          }}
+        />
         <main className="min-w-0 flex-1 px-6 py-6 lg:px-8 lg:py-8">
           <div className="mx-auto max-w-6xl">{children}</div>
         </main>

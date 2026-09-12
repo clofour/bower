@@ -108,6 +108,15 @@ export async function getServicesByProject(projectId: string) {
     .orderBy(services.name)
 }
 
+export async function getServicesForOrg(orgId: string) {
+  return db
+    .select({ service: services, project: projects })
+    .from(services)
+    .innerJoin(projects, eq(projects.id, services.projectId))
+    .where(eq(projects.orgId, orgId))
+    .orderBy(services.name)
+}
+
 export async function getEnvironmentsByProject(projectId: string) {
   return db
     .select()
