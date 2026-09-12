@@ -19,6 +19,7 @@ import {
   FolderKanban,
   Rocket,
   Activity,
+  ScrollText,
   Settings,
   Ellipsis,
   UserCircle,
@@ -36,6 +37,7 @@ const navItems: NavItem[] = [
   { label: 'Projects', href: '/projects', icon: FolderKanban },
   { label: 'Deployments', href: '/deployments', icon: Rocket },
   { label: 'Status', href: '/status', icon: Activity },
+  { label: 'Audit log', href: '/audit', icon: ScrollText },
   { label: 'Settings', href: '/settings', icon: Settings },
 ]
 

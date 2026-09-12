@@ -30,8 +30,6 @@ export default async function OrganizationSettingsPage() {
           id: orgCtx.org.id,
           name: orgCtx.org.name,
           slug: orgCtx.org.slug,
-          trellisApiUrl: orgCtx.org.trellisApiUrl,
-          trellisApiToken: orgCtx.org.trellisApiToken,
         }}
       />
 
