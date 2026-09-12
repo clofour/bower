@@ -4,7 +4,18 @@ import { getCurrentUser } from '@/lib/auth'
 import { ORG_COOKIE_NAME } from '@/lib/constants'
 import { getUserOrganizations, getUserOrganization, getUserTeams } from '@/lib/queries'
 import { Sidebar } from '@/components/sidebar'
+import { HeaderBar } from '@/components/header-bar'
 import { Toaster } from '@/components/ui/toaster'
+
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+}
 
 export default async function DashboardLayout({
   children,
@@ -40,7 +51,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen w-full bg-canvas">
       <Sidebar
         user={{
           name: user.name,
@@ -51,9 +62,12 @@ export default async function DashboardLayout({
         currentOrg={currentOrg}
         teams={teams}
       />
-      <main className="ml-60 min-h-screen">
-        <div className="mx-auto max-w-6xl px-8 py-8">{children}</div>
-      </main>
+      <div className="ml-[236px] flex min-w-0 flex-1 flex-col">
+        <HeaderBar userInitials={getInitials(user.name)} />
+        <main className="min-w-0 flex-1 px-6 py-6 lg:px-8 lg:py-8">
+          <div className="mx-auto max-w-6xl">{children}</div>
+        </main>
+      </div>
       <Toaster />
     </div>
   )
