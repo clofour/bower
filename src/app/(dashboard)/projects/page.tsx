@@ -11,7 +11,7 @@ import {
   CardContent,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { CreateProjectDialog } from '@/components/create-project-dialog'
 import { FolderKanban, ArrowRight } from 'lucide-react'
 
 export default async function ProjectsPage() {
@@ -37,11 +37,7 @@ export default async function ProjectsPage() {
       <PageHeading
         title="Projects"
         description="Manage your deployment projects"
-        actions={
-          <Button size="sm" disabled>
-            New project
-          </Button>
-        }
+        actions={<CreateProjectDialog />}
       />
 
       {projectList.length === 0 ? (
@@ -53,9 +49,7 @@ export default async function ProjectsPage() {
           <p className="mb-4 text-sm text-muted-foreground">
             Create your first project to start deploying services.
           </p>
-          <Button size="sm" disabled>
-            New project
-          </Button>
+          <CreateProjectDialog />
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
