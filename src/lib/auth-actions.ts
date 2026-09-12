@@ -15,6 +15,7 @@ import {
   SESSION_COOKIE_NAME,
 } from '@/lib/auth'
 import { recordAudit } from '@/lib/actions/shared'
+import { ORG_COOKIE_NAME } from '@/lib/constants'
 
 export async function loginAction(
   formData: FormData
@@ -192,8 +193,6 @@ export async function registerAction(
   redirect('/dashboard')
 }
 
-const ORG_COOKIE_NAME = 'bower_org'
-
 export async function switchOrgAction(orgId: string): Promise<void> {
   const cookieStore = await cookies()
   cookieStore.set({
@@ -206,8 +205,6 @@ export async function switchOrgAction(orgId: string): Promise<void> {
     maxAge: 60 * 60 * 24 * 365,
   })
 }
-
-export { ORG_COOKIE_NAME }
 
 export async function logoutAction(): Promise<void> {
   const cookieStore = await cookies()

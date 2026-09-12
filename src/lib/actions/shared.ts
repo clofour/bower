@@ -4,7 +4,7 @@ import { db } from '@/db'
 import { auditLog, projects, services, teamMemberships, teamProjectAccess } from '@/db/schema'
 import { getCurrentUser } from '@/lib/auth'
 import { getUserOrganization } from '@/lib/queries'
-import { ORG_COOKIE_NAME } from '@/lib/auth-actions'
+import { ORG_COOKIE_NAME } from '@/lib/constants'
 
 export async function requireContext() {
   const user = await getCurrentUser()

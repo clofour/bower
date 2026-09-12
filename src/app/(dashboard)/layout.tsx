@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
-import { ORG_COOKIE_NAME } from '@/lib/auth-actions'
+import { ORG_COOKIE_NAME } from '@/lib/constants'
 import { getUserOrganizations, getUserOrganization, getUserTeams } from '@/lib/queries'
 import { Sidebar } from '@/components/sidebar'
 import { Toaster } from '@/components/ui/toaster'
