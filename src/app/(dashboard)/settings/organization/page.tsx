@@ -43,7 +43,7 @@ export default async function OrganizationSettingsPage() {
         </CardHeader>
         <CardContent>
           {members.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No members found.</p>
+            <p className="text-sm text-ink-muted">No members found.</p>
           ) : (
             <Table>
               <TableHeader>
@@ -67,7 +67,7 @@ export default async function OrganizationSettingsPage() {
                         {m.userName}
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{m.userEmail}</TableCell>
+                    <TableCell className="text-ink-muted">{m.userEmail}</TableCell>
                     <TableCell>
                       <Badge variant={m.membership.role === 'owner' ? 'default' : 'secondary'}>
                         {m.membership.role}

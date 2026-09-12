@@ -104,7 +104,7 @@ export function InviteTokensSection({ tokens, role }: InviteTokensSectionProps) 
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-medium">Invite Tokens</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-ink-muted">
             Generate tokens to invite new members to the organization.
           </p>
         </div>
@@ -127,7 +127,7 @@ export function InviteTokensSection({ tokens, role }: InviteTokensSectionProps) 
                 <div className="space-y-3">
                   <p className="text-sm font-medium">Token created successfully. Copy it now -- it will not be shown again.</p>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 rounded bg-muted px-3 py-2 text-sm font-mono break-all">
+                    <code className="flex-1 rounded bg-sunken px-3 py-2 text-sm font-mono break-all">
                       {createdToken}
                     </code>
                     <Button
@@ -161,7 +161,7 @@ export function InviteTokensSection({ tokens, role }: InviteTokensSectionProps) 
                     <Label htmlFor="note">Note (optional)</Label>
                     <Input id="note" name="note" placeholder="e.g. For new hire Jane" />
                   </div>
-                  {error && <p className="text-sm text-destructive">{error}</p>}
+                  {error && <p className="text-sm text-danger-600">{error}</p>}
                   <DialogFooter>
                     <Button type="submit" disabled={loading}>
                       {loading ? 'Creating...' : 'Create Token'}
@@ -175,7 +175,7 @@ export function InviteTokensSection({ tokens, role }: InviteTokensSectionProps) 
       </div>
 
       {tokens.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-4">No invite tokens have been created.</p>
+        <p className="text-sm text-ink-muted py-4">No invite tokens have been created.</p>
       ) : (
         <Table>
           <TableHeader>
@@ -198,12 +198,12 @@ export function InviteTokensSection({ tokens, role }: InviteTokensSectionProps) 
                   <TableCell>
                     <Badge variant="outline">{row.token.role}</Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{row.token.note || '--'}</TableCell>
+                  <TableCell className="text-ink-muted">{row.token.note || '--'}</TableCell>
                   <TableCell>
                     <Badge variant={status.variant}>{status.label}</Badge>
                   </TableCell>
                   <TableCell>{row.createdByName || '--'}</TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
+                  <TableCell className="text-ink-muted text-xs">
                     {new Date(row.token.createdAt).toLocaleDateString()}
                   </TableCell>
                   {isAdmin && (
@@ -215,7 +215,7 @@ export function InviteTokensSection({ tokens, role }: InviteTokensSectionProps) 
                           onClick={() => handleRevoke(row.token.id)}
                           disabled={revoking === row.token.id}
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-4 w-4 text-danger-600" />
                         </Button>
                       )}
                     </TableCell>

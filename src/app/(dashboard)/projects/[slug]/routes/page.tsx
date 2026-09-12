@@ -47,9 +47,9 @@ export default async function RoutesPage({
       {routes.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Globe className="h-10 w-10 text-muted-foreground mb-3" />
+            <Globe className="h-10 w-10 text-ink-muted mb-3" />
             <h3 className="font-medium text-lg">No routes configured</h3>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-ink-muted mt-1">
               Add a route to expose your services to traffic.
             </p>
           </CardContent>
@@ -70,7 +70,7 @@ export default async function RoutesPage({
             {routes.map((row) => (
               <TableRow key={row.route.id}>
                 <TableCell className="font-medium">{row.route.domain}</TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground">
+                <TableCell className="font-mono text-xs text-ink-muted">
                   {row.route.pathPrefix}
                 </TableCell>
                 <TableCell>{row.serviceName}</TableCell>

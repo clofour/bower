@@ -38,7 +38,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
       <DeploymentPoller active={hasActiveDeployment} />
 
       <div className="flex items-center gap-3">
-        <Link href={`/projects/${slug}`} className="text-muted-foreground hover:text-foreground">
+        <Link href={`/projects/${slug}`} className="text-ink-muted hover:text-ink">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <PageHeading
@@ -57,7 +57,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
       <div className="space-y-4">
         {configs.length === 0 ? (
           <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
+            <CardContent className="py-8 text-center text-ink-muted">
               No environment configurations found.
             </CardContent>
           </Card>
@@ -79,50 +79,50 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
               <CardContent>
                 <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm md:grid-cols-4">
                   <div>
-                    <span className="text-muted-foreground">Image</span>
+                    <span className="text-ink-muted">Image</span>
                     <p className="mt-0.5 truncate font-mono text-xs">{config.image}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Replicas</span>
+                    <span className="text-ink-muted">Replicas</span>
                     <p className="mt-0.5">{config.replicas}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">CPU</span>
+                    <span className="text-ink-muted">CPU</span>
                     <p className="mt-0.5">{config.cpu} MHz</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Memory</span>
+                    <span className="text-ink-muted">Memory</span>
                     <p className="mt-0.5">{Math.round(config.memory / 1024 / 1024)} MB</p>
                   </div>
                   {config.port && (
                     <div>
-                      <span className="text-muted-foreground">Port</span>
+                      <span className="text-ink-muted">Port</span>
                       <p className="mt-0.5">{config.port}</p>
                     </div>
                   )}
                   <div>
-                    <span className="text-muted-foreground">Strategy</span>
+                    <span className="text-ink-muted">Strategy</span>
                     <p className="mt-0.5 capitalize">{config.deploymentStrategy.replace(/_/g, ' ')}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Tier</span>
+                    <span className="text-ink-muted">Tier</span>
                     <p className="mt-0.5 capitalize">{config.resourceTier}</p>
                   </div>
                   {config.healthCheckPath && (
                     <div>
-                      <span className="text-muted-foreground">Health check</span>
+                      <span className="text-ink-muted">Health check</span>
                       <p className="mt-0.5 font-mono text-xs">{config.healthCheckPath}</p>
                     </div>
                   )}
                   {config.command && (
                     <div className="col-span-2">
-                      <span className="text-muted-foreground">Command</span>
+                      <span className="text-ink-muted">Command</span>
                       <p className="mt-0.5 font-mono text-xs">{config.command}</p>
                     </div>
                   )}
                   {config.cronSchedule && (
                     <div>
-                      <span className="text-muted-foreground">Schedule</span>
+                      <span className="text-ink-muted">Schedule</span>
                       <p className="mt-0.5 font-mono text-xs">{config.cronSchedule}</p>
                     </div>
                   )}
@@ -138,7 +138,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
       <div className="space-y-3">
         <h3 className="text-lg font-semibold">Recent deployments</h3>
         {deployments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No deployments yet.</p>
+          <p className="text-sm text-ink-muted">No deployments yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -158,7 +158,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
                     <TableCell className="max-w-48 truncate font-mono text-xs">{d.imageAfter}</TableCell>
                     <TableCell className="capitalize">{d.strategy.replace(/_/g, ' ')}</TableCell>
                     <TableCell className="capitalize">{d.triggerType.replace(/_/g, ' ')}</TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-ink-muted">
                       {new Date(d.createdAt).toLocaleDateString()}
                     </TableCell>
                   </TableRow>
