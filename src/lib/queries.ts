@@ -14,7 +14,7 @@ import {
   teamProjectAccess,
   auditLog,
   secretsMetadata,
-  serviceTemplates,
+
   webhookEndpoints,
   notificationChannels,
   sidecars,
@@ -279,12 +279,6 @@ export async function getSecretsByProject(projectId: string) {
     .orderBy(environments.promotionOrder, secretsMetadata.name)
 }
 
-export async function getTemplates(orgId: string) {
-  const { or, isNull } = await import('drizzle-orm')
-  return db.select().from(serviceTemplates)
-    .where(or(eq(serviceTemplates.orgId, orgId), isNull(serviceTemplates.orgId)))
-    .orderBy(serviceTemplates.name)
-}
 
 export async function getProjectIntegrations(projectId: string) {
   const serviceIds = await db.select({ id: services.id }).from(services)
