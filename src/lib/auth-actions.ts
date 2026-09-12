@@ -15,6 +15,7 @@ import {
   SESSION_COOKIE_NAME,
 } from '@/lib/auth'
 import { recordAudit } from '@/lib/actions/shared'
+import { ORG_COOKIE_NAME } from '@/lib/constants'
 
 export async function loginAction(
   formData: FormData
@@ -190,6 +191,19 @@ export async function registerAction(
   cookieStore.set(getSessionCookieConfig(token, expiresAt))
 
   redirect('/dashboard')
+}
+
+export async function switchOrgAction(orgId: string): Promise<void> {
+  const cookieStore = await cookies()
+  cookieStore.set({
+    name: ORG_COOKIE_NAME,
+    value: orgId,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: 60 * 60 * 24 * 365,
+  })
 }
 
 export async function logoutAction(): Promise<void> {

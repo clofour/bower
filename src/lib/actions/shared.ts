@@ -1,13 +1,17 @@
 import { and, eq } from 'drizzle-orm'
+import { cookies } from 'next/headers'
 import { db } from '@/db'
 import { auditLog, projects, services, teamMemberships, teamProjectAccess } from '@/db/schema'
 import { getCurrentUser } from '@/lib/auth'
 import { getUserOrganization } from '@/lib/queries'
+import { ORG_COOKIE_NAME } from '@/lib/constants'
 
 export async function requireContext() {
   const user = await getCurrentUser()
   if (!user) throw new Error('Not authenticated.')
-  const ctx = await getUserOrganization(user.id)
+  const cookieStore = await cookies()
+  const preferredOrgId = cookieStore.get(ORG_COOKIE_NAME)?.value ?? null
+  const ctx = await getUserOrganization(user.id, preferredOrgId)
   if (!ctx) throw new Error('No organization found.')
   return { user, ...ctx }
 }
