@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { Loader2 } from 'lucide-react'
 import { registerAction } from '@/lib/auth-actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,41 +25,77 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight">Create account</h2>
-        <p className="text-sm text-muted-foreground">Enter your details and invite token to get started.</p>
+    <div className="space-y-5">
+      <div className="space-y-1">
+        <h2 className="text-[15px] font-semibold tracking-tight">Create account</h2>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Enter your details and invite token to get started.
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
+          <p role="alert" className="text-xs leading-relaxed text-destructive">
+            {error}
+          </p>
         )}
         <div className="space-y-2">
           <Label htmlFor="name">Name</Label>
           <Input id="name" name="name" placeholder="Your name" autoComplete="name" required />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" name="email" type="email" placeholder="you@example.com" autoComplete="email" required />
+          <Label htmlFor="email">Email address</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="you@example.com"
+            autoComplete="email"
+            required
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
-          <Input id="password" name="password" type="password" placeholder="Minimum 8 characters" autoComplete="new-password" required minLength={8} />
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            placeholder="Minimum 8 characters"
+            autoComplete="new-password"
+            required
+            minLength={8}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="inviteToken">Invite token</Label>
-          <Input id="inviteToken" name="inviteToken" placeholder="Paste your invite token" required />
+          <Input
+            id="inviteToken"
+            name="inviteToken"
+            placeholder="Paste your invite token"
+            className="font-mono text-[12.5px]"
+            required
+          />
         </div>
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Creating account...' : 'Create account'}
+        <Button type="submit" className="mt-1 w-full" size="lg" disabled={loading}>
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Creating account&hellip;
+            </>
+          ) : (
+            'Create account'
+          )}
         </Button>
       </form>
 
-      <p className="text-center text-sm text-muted-foreground">
-        Already have an account?{' '}
-        <Link href="/login" className="font-medium text-primary hover:underline">Sign in</Link>
-      </p>
+      <div className="border-t border-border pt-4">
+        <p className="text-center text-[12.5px] text-muted-foreground">
+          Already have an account?{' '}
+          <Link href="/login" className="font-medium text-primary hover:underline">
+            Sign in
+          </Link>
+        </p>
+      </div>
     </div>
   )
 }
