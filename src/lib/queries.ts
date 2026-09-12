@@ -27,7 +27,7 @@ import {
   organizationTokens,
 } from '@/db/schema'
 
-export async function getUserOrganization(userId: string) {
+export async function getUserOrganizations(userId: string) {
   const rows = await db
     .select({
       org: organizations,
@@ -36,10 +36,9 @@ export async function getUserOrganization(userId: string) {
     .from(organizationMembers)
     .innerJoin(organizations, eq(organizations.id, organizationMembers.orgId))
     .where(eq(organizationMembers.userId, userId))
-    .limit(1)
 
   if (rows.length > 0) {
-    return { org: rows[0].org, role: rows[0].membership.role }
+    return rows.map((r) => ({ org: r.org, role: r.membership.role }))
   }
 
   const [user] = await db
@@ -49,11 +48,31 @@ export async function getUserOrganization(userId: string) {
     .limit(1)
 
   if (user?.isInstanceAdmin) {
-    const [org] = await db.select().from(organizations).limit(1)
-    if (org) return { org, role: 'owner' as const }
+    const allOrgs = await db.select().from(organizations)
+    return allOrgs.map((org) => ({ org, role: 'owner' as const }))
   }
 
-  return null
+  return []
+}
+
+export async function getUserOrganization(userId: string, preferredOrgId?: string | null) {
+  const all = await getUserOrganizations(userId)
+  if (all.length === 0) return null
+  if (preferredOrgId) {
+    const match = all.find((r) => r.org.id === preferredOrgId)
+    if (match) return match
+  }
+  return all[0]
+}
+
+export async function getUserTeams(userId: string, orgId: string) {
+  return db
+    .select({ team: teams })
+    .from(teamMemberships)
+    .innerJoin(teams, eq(teams.id, teamMemberships.teamId))
+    .where(and(eq(teamMemberships.userId, userId), eq(teams.orgId, orgId)))
+    .orderBy(teams.name)
+    .then((rows) => rows.map((r) => r.team))
 }
 
 export async function getProjectsByOrg(orgId: string) {

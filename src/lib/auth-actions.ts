@@ -192,6 +192,23 @@ export async function registerAction(
   redirect('/dashboard')
 }
 
+const ORG_COOKIE_NAME = 'bower_org'
+
+export async function switchOrgAction(orgId: string): Promise<void> {
+  const cookieStore = await cookies()
+  cookieStore.set({
+    name: ORG_COOKIE_NAME,
+    value: orgId,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: 60 * 60 * 24 * 365,
+  })
+}
+
+export { ORG_COOKIE_NAME }
+
 export async function logoutAction(): Promise<void> {
   const cookieStore = await cookies()
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)

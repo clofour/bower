@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Brand } from '@/components/brand'
+import { OrgTeamPicker } from '@/components/org-team-picker'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
@@ -55,15 +56,30 @@ function getInitials(name: string) {
     .toUpperCase()
 }
 
+interface OrgEntry {
+  id: string
+  name: string
+  slug: string
+  role: string
+}
+
+interface TeamEntry {
+  id: string
+  name: string
+}
+
 interface SidebarProps {
   user: {
     name: string
     email: string
     avatarUrl: string | null
   }
+  orgs: OrgEntry[]
+  currentOrg: OrgEntry
+  teams: TeamEntry[]
 }
 
-export function Sidebar({ user }: SidebarProps) {
+export function Sidebar({ user, orgs, currentOrg, teams }: SidebarProps) {
   const pathname = usePathname()
 
   return (
@@ -74,6 +90,11 @@ export function Sidebar({ user }: SidebarProps) {
       </div>
 
       <Separator className="bg-sidebar-border" />
+
+      {/* Org picker */}
+      <div className="px-3 pt-3 pb-1">
+        <OrgTeamPicker orgs={orgs} currentOrg={currentOrg} teams={teams} />
+      </div>
 
       {/* Navigation */}
       <ScrollArea className="flex-1 px-3 py-4">
