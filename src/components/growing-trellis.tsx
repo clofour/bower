@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useId } from 'react'
+import { useEffect, useState, useId, useSyncExternalStore, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 
 const VINES = [
@@ -80,15 +80,18 @@ function Glyph({ index }: { index: number }) {
 export function GrowingTrellis({ className }: { className?: string }) {
   const id = useId()
   const [phase, setPhase] = useState(0)
-  const [reduced, setReduced] = useState(false)
 
-  useEffect(() => {
+  const reducedSubscribe = useCallback((cb: () => void) => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    setReduced(mq.matches)
-    const handler = (e: MediaQueryListEvent) => setReduced(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
+    mq.addEventListener('change', cb)
+    return () => mq.removeEventListener('change', cb)
   }, [])
+  const reducedSnapshot = useCallback(
+    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    [],
+  )
+  const reducedServer = useCallback(() => false, [])
+  const reduced = useSyncExternalStore(reducedSubscribe, reducedSnapshot, reducedServer)
 
   useEffect(() => {
     if (reduced) return
