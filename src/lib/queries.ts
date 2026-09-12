@@ -197,6 +197,52 @@ export async function getDeploymentsByProject(
     .limit(limit)
 }
 
+export async function getDeploymentsForOrg(orgId: string, limit = 50) {
+  const projectIds = await db
+    .select({ id: projects.id })
+    .from(projects)
+    .where(eq(projects.orgId, orgId))
+
+  if (projectIds.length === 0) return []
+
+  const svcIds = await db
+    .select({ id: services.id })
+    .from(services)
+    .where(
+      (await import('drizzle-orm')).inArray(
+        services.projectId,
+        projectIds.map((p) => p.id),
+      ),
+    )
+
+  if (svcIds.length === 0) return []
+
+  const { inArray } = await import('drizzle-orm')
+  return db
+    .select({
+      deployment: deployments,
+      serviceName: services.name,
+      serviceSlug: services.slug,
+      environmentName: environments.name,
+      projectName: projects.name,
+      projectSlug: projects.slug,
+      userName: users.name,
+    })
+    .from(deployments)
+    .innerJoin(services, eq(services.id, deployments.serviceId))
+    .innerJoin(projects, eq(projects.id, services.projectId))
+    .innerJoin(environments, eq(environments.id, deployments.environmentId))
+    .leftJoin(users, eq(users.id, deployments.triggeredByUserId))
+    .where(
+      inArray(
+        deployments.serviceId,
+        svcIds.map((s) => s.id),
+      ),
+    )
+    .orderBy(desc(deployments.createdAt))
+    .limit(limit)
+}
+
 export async function getRoutesByProject(projectId: string) {
   return db
     .select({
@@ -213,6 +259,33 @@ export async function getRoutesByProject(projectId: string) {
 
 export async function getManagedProxies(projectId: string) {
   return db.select({ proxy: managedProxies, environmentName: environments.name }).from(managedProxies).innerJoin(environments, eq(environments.id, managedProxies.environmentId)).where(eq(environments.projectId, projectId))
+}
+
+export async function getManagedProxiesForOrg(orgId: string) {
+  return db
+    .select({
+      proxy: managedProxies,
+      environmentName: environments.name,
+      projectName: projects.name,
+    })
+    .from(managedProxies)
+    .innerJoin(environments, eq(environments.id, managedProxies.environmentId))
+    .innerJoin(projects, eq(projects.id, environments.projectId))
+    .where(eq(projects.orgId, orgId))
+    .orderBy(environments.promotionOrder)
+}
+
+export async function getRouteCountsByEnvironment(orgId: string) {
+  const { sql } = await import('drizzle-orm')
+  return db
+    .select({
+      environmentId: routes.environmentId,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(routes)
+    .innerJoin(projects, eq(projects.id, routes.projectId))
+    .where(eq(projects.orgId, orgId))
+    .groupBy(routes.environmentId)
 }
 
 export async function getDeploymentEvents(deploymentIds: string[]) {
