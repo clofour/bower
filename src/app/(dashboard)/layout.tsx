@@ -7,16 +7,6 @@ import { Sidebar } from '@/components/sidebar'
 import { HeaderBar } from '@/components/header-bar'
 import { Toaster } from '@/components/ui/toaster'
 
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .map((w) => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join('')
-    .toUpperCase()
-}
-
 export default async function DashboardLayout({
   children,
 }: {
@@ -63,7 +53,7 @@ export default async function DashboardLayout({
         teams={teams}
       />
       <div className="ml-[236px] flex min-w-0 flex-1 flex-col">
-        <HeaderBar userInitials={getInitials(user.name)} />
+        <HeaderBar />
         <main className="min-w-0 flex-1 px-6 py-6 lg:px-8 lg:py-8">
           <div className="mx-auto max-w-6xl">{children}</div>
         </main>

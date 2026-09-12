@@ -6,9 +6,12 @@ import { Search } from 'lucide-react'
 const titleMap: Record<string, string> = {
   '/dashboard': 'Overview',
   '/projects': 'Projects',
-  '/cluster': 'Cluster',
+  '/deployments': 'Deployments',
+  '/status': 'Status',
+  '/settings': 'Settings',
   '/settings/organization': 'Organization',
   '/settings/teams': 'Teams',
+  '/settings/cluster': 'Cluster',
   '/settings/audit': 'Audit log',
   '/settings/account': 'Account',
 }
@@ -20,11 +23,7 @@ function deriveTitle(pathname: string) {
   return last.charAt(0).toUpperCase() + last.slice(1).replace(/-/g, ' ')
 }
 
-interface HeaderBarProps {
-  userInitials: string
-}
-
-export function HeaderBar({ userInitials }: HeaderBarProps) {
+export function HeaderBar() {
   const pathname = usePathname()
   const title = deriveTitle(pathname)
 
@@ -44,10 +43,6 @@ export function HeaderBar({ userInitials }: HeaderBarProps) {
           ⌘K
         </kbd>
       </button>
-
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-ink text-2xs font-semibold text-white">
-        {userInitials}
-      </span>
     </header>
   )
 }
