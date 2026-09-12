@@ -15,7 +15,7 @@ const titleMap: Record<string, string> = {
   '/settings/organization': 'Organization',
   '/settings/teams': 'Teams',
   '/settings/cluster': 'Cluster',
-  '/settings/audit': 'Audit log',
+  '/audit': 'Audit log',
   '/settings/account': 'Account',
 }
 

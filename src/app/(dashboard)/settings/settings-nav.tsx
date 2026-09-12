@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 const tabs = [
   { label: 'Organization', href: '/settings/organization' },
   { label: 'Teams', href: '/settings/teams' },
-  { label: 'Audit log', href: '/settings/audit' },
+  { label: 'Cluster', href: '/settings/cluster' },
 ]
 
 export function SettingsNav() {
