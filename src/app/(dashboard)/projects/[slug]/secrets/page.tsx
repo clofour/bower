@@ -63,9 +63,9 @@ export default async function SecretsPage({
       {secrets.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <KeyRound className="h-10 w-10 text-muted-foreground mb-3" />
+            <KeyRound className="h-10 w-10 text-ink-muted mb-3" />
             <h3 className="font-medium text-lg">No secrets</h3>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-ink-muted mt-1">
               Add secrets to provide sensitive configuration to your services.
             </p>
           </CardContent>
@@ -90,10 +90,10 @@ export default async function SecretsPage({
                 <TableCell>
                   <Badge variant="secondary">{row.environmentName}</Badge>
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="text-ink-muted">
                   {row.sharedName ?? '-'}
                 </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
+                <TableCell className="text-ink-muted text-sm">
                   {formatDate(row.secret.lastRotatedAt)}
                 </TableCell>
                 <TableCell className="text-right">

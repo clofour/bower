@@ -38,8 +38,8 @@ export default async function TeamsPage() {
       {teamsWithDetails.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <Users className="h-10 w-10 text-muted-foreground/50" />
-            <p className="text-muted-foreground">No teams yet. Create one to organize project access.</p>
+            <Users className="h-10 w-10 text-ink-muted/50" />
+            <p className="text-ink-muted">No teams yet. Create one to organize project access.</p>
           </CardContent>
         </Card>
       ) : (
@@ -57,7 +57,7 @@ export default async function TeamsPage() {
                 <div>
                   <h4 className="mb-2 text-sm font-medium">Members</h4>
                   {members.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No members.</p>
+                    <p className="text-sm text-ink-muted">No members.</p>
                   ) : (
                     <Table>
                       <TableHeader>
@@ -70,7 +70,7 @@ export default async function TeamsPage() {
                         {members.map((m) => (
                           <TableRow key={m.membership.id}>
                             <TableCell>{m.userName}</TableCell>
-                            <TableCell className="text-muted-foreground">{m.userEmail}</TableCell>
+                            <TableCell className="text-ink-muted">{m.userEmail}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -81,7 +81,7 @@ export default async function TeamsPage() {
                 <div>
                   <h4 className="mb-2 text-sm font-medium">Project access</h4>
                   {access.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No project access granted.</p>
+                    <p className="text-sm text-ink-muted">No project access granted.</p>
                   ) : (
                     <Table>
                       <TableHeader>

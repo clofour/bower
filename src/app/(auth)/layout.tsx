@@ -28,7 +28,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       {/* Right — auth form */}
       <section className="flex items-center justify-center px-6 py-14 sm:px-10 lg:min-h-screen lg:px-12 lg:py-10 xl:px-16">
         <div className="w-full max-w-[368px]">
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-raised">
+          <div className="rounded-2xl border border-line bg-surface p-6 shadow-raised">
             {children}
           </div>
         </div>

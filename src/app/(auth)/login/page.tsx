@@ -28,7 +28,7 @@ export default function LoginPage() {
     <div className="space-y-5">
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <p role="alert" className="text-xs leading-relaxed text-destructive">
+          <p role="alert" className="text-xs leading-relaxed text-danger-600">
             {error}
           </p>
         )}
@@ -66,10 +66,10 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <div className="border-t border-border pt-4">
-        <p className="text-center text-[12.5px] text-muted-foreground">
+      <div className="border-t border-line pt-4">
+        <p className="text-center text-[12.5px] text-ink-muted">
           Don&apos;t have an account?{' '}
-          <Link href="/register" className="font-medium text-primary hover:underline">
+          <Link href="/register" className="font-medium text-brand-600 hover:underline">
             Register
           </Link>
         </p>

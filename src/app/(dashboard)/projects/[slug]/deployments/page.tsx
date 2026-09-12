@@ -65,9 +65,9 @@ export default async function DeploymentsPage({
       {rows.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Rocket className="h-10 w-10 text-muted-foreground mb-3" />
+            <Rocket className="h-10 w-10 text-ink-muted mb-3" />
             <h3 className="font-medium text-lg">No deployments yet</h3>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-ink-muted mt-1">
               Deploy a service to see its history here.
             </p>
           </CardContent>
@@ -98,7 +98,7 @@ export default async function DeploymentsPage({
                 <TableCell className="font-mono text-xs">
                   {imageShort(row.deployment.imageAfter)}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="text-ink-muted">
                   {row.userName ?? row.deployment.triggerType}
                 </TableCell>
                 <TableCell>
@@ -106,7 +106,7 @@ export default async function DeploymentsPage({
                     {row.deployment.strategy.replace(/_/g, ' ')}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
+                <TableCell className="text-ink-muted text-sm">
                   {formatTime(row.deployment.createdAt)}
                 </TableCell>
               </TableRow>

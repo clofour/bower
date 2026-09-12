@@ -28,14 +28,14 @@ export default function RegisterPage() {
     <div className="space-y-5">
       <div className="space-y-1">
         <h2 className="text-[15px] font-semibold tracking-tight">Create account</h2>
-        <p className="text-xs leading-relaxed text-muted-foreground">
+        <p className="text-xs leading-relaxed text-ink-muted">
           Enter your details and invite token to get started.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <p role="alert" className="text-xs leading-relaxed text-destructive">
+          <p role="alert" className="text-xs leading-relaxed text-danger-600">
             {error}
           </p>
         )}
@@ -88,10 +88,10 @@ export default function RegisterPage() {
         </Button>
       </form>
 
-      <div className="border-t border-border pt-4">
-        <p className="text-center text-[12.5px] text-muted-foreground">
+      <div className="border-t border-line pt-4">
+        <p className="text-center text-[12.5px] text-ink-muted">
           Already have an account?{' '}
-          <Link href="/login" className="font-medium text-primary hover:underline">
+          <Link href="/login" className="font-medium text-brand-600 hover:underline">
             Sign in
           </Link>
         </p>

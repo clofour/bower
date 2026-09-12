@@ -47,7 +47,7 @@ export default async function IntegrationsPage({
         {hooks.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-ink-muted">
                 No webhook endpoints configured.
               </p>
             </CardContent>
@@ -75,7 +75,7 @@ export default async function IntegrationsPage({
                   <TableCell className="capitalize">
                     {row.hook.provider}
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="text-sm text-ink-muted">
                     {row.hook.deployMode.replace(/_/g, ' ')}
                   </TableCell>
                   <TableCell>
@@ -102,7 +102,7 @@ export default async function IntegrationsPage({
         {channels.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-ink-muted">
                 No notification channels configured.
               </p>
             </CardContent>

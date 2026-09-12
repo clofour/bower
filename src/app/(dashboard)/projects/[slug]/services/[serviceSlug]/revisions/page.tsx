@@ -36,7 +36,7 @@ export default async function RevisionsPage({ params }: { params: Promise<{ slug
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Link href={`/projects/${slug}/services/${serviceSlug}`} className="text-muted-foreground hover:text-foreground">
+        <Link href={`/projects/${slug}/services/${serviceSlug}`} className="text-ink-muted hover:text-ink">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <PageHeading title="Revisions" eyebrow={service.name} />
@@ -44,13 +44,13 @@ export default async function RevisionsPage({ params }: { params: Promise<{ slug
 
       {!activeConfig ? (
         <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
+          <CardContent className="py-8 text-center text-ink-muted">
             No active Trellis job for this service.
           </CardContent>
         </Card>
       ) : revisions.length === 0 ? (
         <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
+          <CardContent className="py-8 text-center text-ink-muted">
             No revisions found.
           </CardContent>
         </Card>
@@ -68,8 +68,8 @@ export default async function RevisionsPage({ params }: { params: Promise<{ slug
               {revisions.map((rev) => (
                 <TableRow key={rev.revision}>
                   <TableCell className="font-mono">{rev.revision}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{rev.spec.name}</TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="font-mono text-xs text-ink-muted">{rev.spec.name}</TableCell>
+                  <TableCell className="text-ink-muted">
                     {new Date(rev.created_at).toLocaleString()}
                   </TableCell>
                 </TableRow>

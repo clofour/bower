@@ -43,9 +43,9 @@ export default async function EnvironmentsPage({
       {environments.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Layers className="h-10 w-10 text-muted-foreground mb-3" />
+            <Layers className="h-10 w-10 text-ink-muted mb-3" />
             <h3 className="font-medium text-lg">No environments</h3>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-ink-muted mt-1">
               Create an environment to begin configuring deployments.
             </p>
           </CardContent>
@@ -67,7 +67,7 @@ export default async function EnvironmentsPage({
             {environments.map((env) => (
               <TableRow key={env.id}>
                 <TableCell className="font-medium">{env.name}</TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground">
+                <TableCell className="font-mono text-xs text-ink-muted">
                   {env.slug}
                 </TableCell>
                 <TableCell>

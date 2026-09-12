@@ -51,7 +51,7 @@ export default async function AllocationDetailPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Link href={`/projects/${slug}/services/${serviceSlug}`} className="text-muted-foreground hover:text-foreground">
+        <Link href={`/projects/${slug}/services/${serviceSlug}`} className="text-ink-muted hover:text-ink">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <PageHeading
@@ -73,35 +73,35 @@ export default async function AllocationDetailPage({
           <CardContent>
             <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm md:grid-cols-3">
               <div>
-                <span className="text-muted-foreground">Phase</span>
+                <span className="text-ink-muted">Phase</span>
                 <div className="mt-0.5"><StatusDot status={allocation.phase} /></div>
               </div>
               <div>
-                <span className="text-muted-foreground">Health</span>
+                <span className="text-ink-muted">Health</span>
                 <div className="mt-0.5"><StatusDot status={allocation.health} /></div>
               </div>
               <div>
-                <span className="text-muted-foreground">Group</span>
+                <span className="text-ink-muted">Group</span>
                 <p className="mt-0.5 font-mono text-xs">{allocation.group}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Job</span>
+                <span className="text-ink-muted">Job</span>
                 <p className="mt-0.5 font-mono text-xs">{allocation.job}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Node</span>
+                <span className="text-ink-muted">Node</span>
                 <p className="mt-0.5 font-mono text-xs">{allocation.node_id}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Revision</span>
+                <span className="text-ink-muted">Revision</span>
                 <p className="mt-0.5">{allocation.job_revision}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Attempt</span>
+                <span className="text-ink-muted">Attempt</span>
                 <p className="mt-0.5">{allocation.attempt}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Created</span>
+                <span className="text-ink-muted">Created</span>
                 <p className="mt-0.5 text-xs">{new Date(allocation.created_at).toLocaleString()}</p>
               </div>
               {allocation.draining && (
@@ -121,7 +121,7 @@ export default async function AllocationDetailPage({
             <div className="mb-1 flex items-center gap-2">
               <Badge variant="secondary">stdout</Badge>
             </div>
-            <pre className="max-h-96 overflow-auto rounded-md bg-muted p-4 font-mono text-xs leading-relaxed">
+            <pre className="max-h-96 overflow-auto rounded-md bg-sunken p-4 font-mono text-xs leading-relaxed">
               {stdout || 'No output'}
             </pre>
           </div>
@@ -130,7 +130,7 @@ export default async function AllocationDetailPage({
               <div className="mb-1 flex items-center gap-2">
                 <Badge variant="destructive">stderr</Badge>
               </div>
-              <pre className="max-h-96 overflow-auto rounded-md bg-destructive/5 p-4 font-mono text-xs leading-relaxed text-destructive">
+              <pre className="max-h-96 overflow-auto rounded-md bg-danger-50 p-4 font-mono text-xs leading-relaxed text-danger-600">
                 {stderr}
               </pre>
             </div>

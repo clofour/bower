@@ -69,10 +69,10 @@ export function OrgTeamPicker({ orgs, currentOrg, teams }: OrgTeamPickerProps) {
             onSelect={() => handleOrgSwitch(org.id)}
             className="gap-2"
           >
-            <Building2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <Building2 className="h-3.5 w-3.5 shrink-0 text-ink-muted" />
             <span className="flex-1 truncate">{org.name}</span>
             {org.id === currentOrg.id && (
-              <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <Check className="h-3.5 w-3.5 shrink-0 text-brand-600" />
             )}
           </DropdownMenuItem>
         ))}
@@ -83,7 +83,7 @@ export function OrgTeamPicker({ orgs, currentOrg, teams }: OrgTeamPickerProps) {
             <DropdownMenuLabel>Your teams</DropdownMenuLabel>
             {teams.map((team) => (
               <DropdownMenuItem key={team.id} className="gap-2" disabled>
-                <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <Users className="h-3.5 w-3.5 shrink-0 text-ink-muted" />
                 <span className="flex-1 truncate">{team.name}</span>
               </DropdownMenuItem>
             ))}

@@ -49,9 +49,9 @@ export default async function ProjectOverviewPage({
       {services.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Server className="h-10 w-10 text-muted-foreground mb-3" />
+            <Server className="h-10 w-10 text-ink-muted mb-3" />
             <h3 className="font-medium text-lg">No services yet</h3>
-            <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+            <p className="text-sm text-ink-muted mt-1 max-w-sm">
               Create your first service to start deploying containers with Trellis.
             </p>
           </CardContent>
@@ -64,7 +64,7 @@ export default async function ProjectOverviewPage({
               href={`/projects/${slug}/services/${service.slug}`}
               className="block"
             >
-              <Card className="hover:border-primary/50 transition-colors">
+              <Card className="hover:border-brand-500/50 transition-colors">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">{service.name}</CardTitle>
@@ -77,7 +77,7 @@ export default async function ProjectOverviewPage({
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-ink-muted">
                     Created {new Date(service.createdAt).toLocaleDateString()}
                   </p>
                 </CardContent>

@@ -46,11 +46,11 @@ export default async function ProjectsPage() {
 
       {projectList.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-            <FolderKanban className="h-6 w-6 text-muted-foreground" />
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-sunken">
+            <FolderKanban className="h-6 w-6 text-ink-muted" />
           </div>
           <h3 className="mb-1 text-sm font-medium">No projects yet</h3>
-          <p className="mb-4 text-sm text-muted-foreground">
+          <p className="mb-4 text-sm text-ink-muted">
             Create your first project to start deploying services.
           </p>
           <Button size="sm" disabled>
@@ -65,7 +65,7 @@ export default async function ProjectsPage() {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <CardTitle className="text-base">{project.name}</CardTitle>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                    <ArrowRight className="h-4 w-4 text-ink-muted opacity-0 transition-opacity group-hover:opacity-100" />
                   </div>
                   {project.description && (
                     <CardDescription className="line-clamp-2">
@@ -74,7 +74,7 @@ export default async function ProjectsPage() {
                   )}
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-3 text-sm text-ink-muted">
                     <Badge variant="secondary">
                       {serviceCountMap.get(project.id) ?? 0}{' '}
                       {(serviceCountMap.get(project.id) ?? 0) === 1 ? 'service' : 'services'}
