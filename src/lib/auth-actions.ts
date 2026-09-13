@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { eq } from 'drizzle-orm'
 import { createHash } from 'node:crypto'
 import { db } from '@/db'
-import { users, organizations, organizationTokens, instanceTokens } from '@/db/schema'
+import { users, organizations, organizationMembers, organizationTokens, instanceTokens } from '@/db/schema'
 import {
   hashPassword,
   verifyPassword,
@@ -89,7 +89,6 @@ export async function registerAction(
 
   const tokenHash = createHash('sha256').update(trimmedToken).digest('hex')
 
-  // Check email uniqueness early
   const existingUsers = await db
     .select()
     .from(users)
@@ -102,7 +101,6 @@ export async function registerAction(
 
   const passwordHash = await hashPassword(password)
 
-  // Try instance token first
   const instanceRows = await db
     .select()
     .from(instanceTokens)
@@ -124,9 +122,6 @@ export async function registerAction(
       .set({ usedByUserId: newUser.id, usedAt: new Date() })
       .where(eq(instanceTokens.id, instance.id))
 
-    // Audit is currently organization-scoped. Record the registration against
-    // the first organization when one exists, without manufacturing an
-    // organization membership for the instance administrator.
     const [firstOrg] = await db.select({ id: organizations.id }).from(organizations).limit(1)
     if (firstOrg) {
       await recordAudit({
@@ -142,26 +137,17 @@ export async function registerAction(
     redirect('/dashboard')
   }
 
-  // Fall back to organization token
   const orgTokenRows = await db
     .select()
     .from(organizationTokens)
     .where(eq(organizationTokens.tokenHash, tokenHash))
     .limit(1)
 
-  if (orgTokenRows.length === 0) {
-    return { error: 'Invalid token.' }
-  }
+  if (orgTokenRows.length === 0) return { error: 'Invalid token.' }
 
   const invite = orgTokenRows[0]
-
-  if (invite.usedAt) {
-    return { error: 'This token has already been used.' }
-  }
-
-  if (invite.expiresAt && invite.expiresAt < new Date()) {
-    return { error: 'This token has expired.' }
-  }
+  if (invite.usedAt) return { error: 'This token has already been used.' }
+  if (invite.expiresAt && invite.expiresAt < new Date()) return { error: 'This token has expired.' }
 
   const [newUser] = await db
     .insert(users)
@@ -207,11 +193,7 @@ export async function logoutAction(): Promise<void> {
   const cookieStore = await cookies()
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)
 
-  if (sessionCookie?.value) {
-    await deleteSession(sessionCookie.value)
-  }
-
+  if (sessionCookie?.value) await deleteSession(sessionCookie.value)
   cookieStore.delete(SESSION_COOKIE_NAME)
-
   redirect('/login')
 }
