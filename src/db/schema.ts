@@ -21,13 +21,6 @@ export const orgMemberRoleEnum = pgEnum("org_member_role", [
   "member",
 ]);
 
-export const serviceTypeEnum = pgEnum("service_type", [
-  "web",
-  "worker",
-  "cron",
-  "custom",
-]);
-
 export const healthCheckTypeEnum = pgEnum("health_check_type", [
   "http",
   "tcp",
@@ -293,7 +286,6 @@ export const services = pgTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     slug: text("slug").notNull(),
-    type: serviceTypeEnum("type").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

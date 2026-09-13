@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { buildJobSpec, type BowerServiceConfig } from './job-builder'
 
 const base: BowerServiceConfig = {
-  name: 'api-green', serviceLabel: 'api', namespace: 'shop-production', type: 'web', image: 'ghcr.io/acme/api:v2',
+  name: 'api-green', serviceLabel: 'api', namespace: 'shop-production', image: 'ghcr.io/acme/api:v2',
   port: 8080, replicas: 2, cpu: 250, memory: 268435456, healthCheckType: 'http', healthCheckPath: '/ready',
   healthCheckInterval: 7, healthCheckTimeout: 3, healthCheckThreshold: 4, deploymentStrategy: 'rolling',
   envVars: { LOG_LEVEL: 'info' }, labels: { team: 'platform' }, command: '/app/server',
@@ -21,6 +21,6 @@ test('builds a complete web workload with platform labels and attachments', () =
 
 test('custom raw specs keep the selected Bower name and namespace', () => {
   const raw = { name: 'ignored', namespace: 'ignored', task_groups: [{ name: 'custom', count: 1, tasks: [{ name: 'task', image: 'busybox' }] }] }
-  const spec = buildJobSpec({ ...base, type: 'custom', rawConfig: raw })
+  const spec = buildJobSpec({ ...base, rawConfig: raw })
   assert.equal(spec.name, base.name); assert.equal(spec.namespace, base.namespace); assert.equal(spec.task_groups[0].tasks[0].image, 'busybox'); assert.equal(spec.task_groups[0].labels?.['bower/service'], 'api')
 })
