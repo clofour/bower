@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { StatusDot, Chip } from '@/components/status'
 import { DeploymentPoller } from '@/components/deployment-poller'
 import { ServiceActions } from './service-actions'
+import { EditConfigDialog } from './edit-config-dialog'
 import { ArrowLeft, Box, Rocket } from 'lucide-react'
 
 export default async function ServiceDetailPage({ params }: { params: Promise<{ slug: string; serviceSlug: string }> }) {
@@ -70,6 +71,11 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
                     {environment.isLocked && (
                       <Chip tone="warn">Locked</Chip>
                     )}
+                    <EditConfigDialog
+                      serviceId={service.id}
+                      environmentId={environment.id}
+                      config={config}
+                    />
                     <ServiceActions
                       serviceId={service.id}
                       environmentId={environment.id}

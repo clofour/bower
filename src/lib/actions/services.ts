@@ -94,14 +94,18 @@ export async function createServiceAction(projectSlug: string, formData: FormDat
   if (duplicate) return { error: 'A service with this name already exists.' }
   const port = Number(formData.get('port')) || null
   const cpu = Number(formData.get('cpu')) || 100
-  const memory = Number(formData.get('memory')) || 134217728
+  const memoryMB = Number(formData.get('memory')) || 128
+  const memory = memoryMB * 1048576
+  const strategy = (String(formData.get('strategy') ?? '') || 'recreate') as 'rolling' | 'recreate' | 'blue_green' | 'canary'
+  const replicas = Number(formData.get('replicas'))
   const [service] = await db.insert(services).values({ projectId: project.id, name, slug }).returning()
   const envs = await db.select().from(environments).where(eq(environments.projectId, project.id))
   if (envs.length) await db.insert(serviceConfigs).values(envs.map((env) => ({
     serviceId: service.id, environmentId: env.id, image, port,
-    replicas: env.defaultReplicas, cpu, memory,
+    replicas: Number.isInteger(replicas) && replicas >= 0 ? replicas : env.defaultReplicas,
+    cpu, memory,
     resourceTier: env.resourceTier as 'small' | 'medium' | 'large' | 'xl' | 'custom',
-    deploymentStrategy: 'rolling' as const,
+    deploymentStrategy: strategy,
     healthCheckType: (port ? 'http' : undefined) as 'http' | 'tcp' | 'script' | undefined,
     healthCheckPath: port ? '/health' : null,
   }))).returning()
