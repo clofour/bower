@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { InviteTokensSection } from '@/components/invite-tokens-section'
+import { MemberRoleSelect } from './member-role-select'
 
 export default async function MembersSettingsPage() {
   const user = await getCurrentUser()
@@ -18,6 +19,7 @@ export default async function MembersSettingsPage() {
     getOrgMembers(orgCtx.org.id),
     getOrganizationTokens(orgCtx.org.id),
   ])
+  const canManageRoles = orgCtx.role === 'owner'
 
   return (
     <div className="mx-auto max-w-[1180px] space-y-6">
@@ -40,6 +42,7 @@ export default async function MembersSettingsPage() {
                 <TableHead>Member</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Organization role</TableHead>
+                {canManageRoles ? <TableHead className="w-[136px]" /> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -62,6 +65,15 @@ export default async function MembersSettingsPage() {
                       {member.membership.role}
                     </Badge>
                   </TableCell>
+                  {canManageRoles ? (
+                    <TableCell>
+                      <MemberRoleSelect
+                        membershipId={member.membership.id}
+                        role={member.membership.role}
+                        canManage={canManageRoles}
+                      />
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))}
             </TableBody>
