@@ -46,6 +46,7 @@ export default async function ProjectLayout({
 
   const tabs = [
     { label: 'Overview', href: '' },
+    { label: 'Services', href: '/services', count: services.length },
     { label: 'Deployments', href: '/deployments', count: undefined },
     { label: 'Environments', href: '/environments', count: environments.length },
     { label: 'Secrets', href: '/secrets' },
