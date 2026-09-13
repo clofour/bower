@@ -52,11 +52,16 @@ export default async function DashboardLayout({
           avatarUrl: user.avatarUrl,
         }}
       />
-      <div className="ml-[236px] flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col lg:ml-[236px]">
         <HeaderBar
           orgs={orgs}
           currentOrg={currentOrg}
           teams={teams}
+          user={{
+            name: user.name,
+            email: user.email,
+            avatarUrl: user.avatarUrl,
+          }}
           searchData={{
             projects: userProjects.map((p) => ({
               id: p.id,

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { ChevronRight, Search } from 'lucide-react'
 import { CommandPalette } from '@/components/command-palette'
 import { OrgTeamPicker } from '@/components/org-team-picker'
+import { MobileDrawer } from '@/components/mobile-drawer'
 
 const titleMap: Record<string, string> = {
   '/dashboard': 'Overview',
@@ -47,9 +48,14 @@ interface HeaderBarProps {
     services: { id: string; name: string; slug: string; projectName: string; projectSlug: string }[]
     orgName: string
   }
+  user: {
+    name: string
+    email: string
+    avatarUrl: string | null
+  }
 }
 
-export function HeaderBar({ orgs, currentOrg, teams, searchData }: HeaderBarProps) {
+export function HeaderBar({ orgs, currentOrg, teams, searchData, user }: HeaderBarProps) {
   const pathname = usePathname()
   const title = deriveTitle(pathname)
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -67,7 +73,8 @@ export function HeaderBar({ orgs, currentOrg, teams, searchData }: HeaderBarProp
 
   return (
     <>
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-line bg-canvas/85 px-6 backdrop-blur-md">
+      <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-line bg-canvas/85 px-4 backdrop-blur-md sm:px-6">
+        <MobileDrawer user={user} />
         <div className="flex min-w-0 flex-1 items-center gap-1">
           <OrgTeamPicker orgs={orgs} currentOrg={currentOrg} teams={teams} />
           <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
