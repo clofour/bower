@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogBody, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Plus } from 'lucide-react'
+import { Plus, ChevronDown } from 'lucide-react'
 
 export function CreateServiceDialog({ projectSlug }: { projectSlug: string }) {
   const [open, setOpen] = useState(false)
@@ -56,13 +56,36 @@ export function CreateServiceDialog({ projectSlug }: { projectSlug: string }) {
                 <Input id="port" name="port" type="number" placeholder="8080" />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="replicas">Replicas</Label>
+                <Input id="replicas" name="replicas" type="number" defaultValue={1} min={0} required />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="strategy">Deployment strategy</Label>
+                <div className="relative">
+                  <select
+                    id="strategy"
+                    name="strategy"
+                    defaultValue="recreate"
+                    className="flex h-9 w-full appearance-none rounded-lg border border-line bg-surface px-3 pr-9 text-[13px] text-ink shadow-card transition-[border-color,box-shadow] duration-150 ease-enter focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                  >
+                    <option value="recreate">recreate</option>
+                    <option value="rolling">rolling</option>
+                    <option value="blue_green">blue_green</option>
+                    <option value="canary">canary</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-muted" aria-hidden="true" />
+                </div>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="cpu">CPU (MHz)</Label>
                 <Input id="cpu" name="cpu" type="number" defaultValue={100} required />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="memory">Memory (bytes)</Label>
-              <Input id="memory" name="memory" type="number" defaultValue={134217728} required />
+              <Label htmlFor="memory">Memory (MB)</Label>
+              <Input id="memory" name="memory" type="number" defaultValue={128} required />
             </div>
             <Button variant="primary" type="submit" className="w-full" disabled={loading}>
               {loading ? 'Creating...' : 'Create service'}

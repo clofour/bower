@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Lock, Unlock, Layers } from 'lucide-react'
+import { CreateEnvironmentDialog } from './create-environment-dialog'
 
 export default async function EnvironmentsPage({
   params,
@@ -39,7 +40,10 @@ export default async function EnvironmentsPage({
 
   return (
     <div className="space-y-5">
-      <SectionTitle>Environments</SectionTitle>
+      <div className="flex items-center justify-between">
+        <SectionTitle>Environments</SectionTitle>
+        <CreateEnvironmentDialog projectId={project.id} />
+      </div>
 
       {environments.length === 0 ? (
         <Panel>
