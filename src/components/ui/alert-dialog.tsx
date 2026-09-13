@@ -1,9 +1,32 @@
+'use client'
+
 import * as React from 'react'
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'
 
-const AlertDialog = AlertDialogPrimitive.Root
+const AlertDialogOpenContext = React.createContext(false)
+
+function AlertDialog({ children, ...props }: React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Root>) {
+  const [internalOpen, setInternalOpen] = React.useState(props.defaultOpen ?? false)
+  const open = props.open !== undefined ? props.open : internalOpen
+
+  return (
+    <AlertDialogOpenContext.Provider value={open}>
+      <AlertDialogPrimitive.Root
+        {...props}
+        onOpenChange={(v) => {
+          setInternalOpen(v)
+          props.onOpenChange?.(v)
+        }}
+      >
+        {children}
+      </AlertDialogPrimitive.Root>
+    </AlertDialogOpenContext.Provider>
+  )
+}
+
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger
 const AlertDialogPortal = AlertDialogPrimitive.Portal
 
@@ -12,7 +35,7 @@ const AlertDialogOverlay = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Overlay
-    className={cn('fixed inset-0 z-50 bg-ink/25 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0', className)}
+    className={cn('fixed inset-0 z-50 bg-ink/25', className)}
     {...props}
     ref={ref}
   />
@@ -22,19 +45,47 @@ AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName
 const AlertDialogContent = React.forwardRef<
   React.ComponentRef<typeof AlertDialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <AlertDialogPortal>
-    <AlertDialogOverlay />
-    <AlertDialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] overflow-hidden rounded-xl border border-line bg-surface shadow-pop duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-[0.97] data-[state=open]:zoom-in-[0.97] data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]',
-        className,
+>(({ className, ...props }, ref) => {
+  const open = React.useContext(AlertDialogOpenContext)
+  const reduced = useReducedMotion()
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <AlertDialogPortal forceMount>
+          <AlertDialogPrimitive.Overlay asChild forceMount>
+            <motion.div
+              className="fixed inset-0 z-50 bg-ink/25"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            />
+          </AlertDialogPrimitive.Overlay>
+          <AlertDialogPrimitive.Content
+            asChild
+            ref={ref}
+            forceMount
+            {...props}
+          >
+            <motion.div
+              className={cn(
+                'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl border border-line bg-surface shadow-pop',
+                className,
+              )}
+              initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.97, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: 4 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {props.children}
+            </motion.div>
+          </AlertDialogPrimitive.Content>
+        </AlertDialogPortal>
       )}
-      {...props}
-    />
-  </AlertDialogPortal>
-))
+    </AnimatePresence>
+  )
+})
 AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName
 
 const AlertDialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (

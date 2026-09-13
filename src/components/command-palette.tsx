@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import {
   Search,
   FolderKanban,
@@ -113,21 +114,40 @@ export function CommandPalette({ open, onOpenChange, projects, services, orgName
     [results, cursor, go, scrollActiveIntoView],
   )
 
+  const reduced = useReducedMotion()
+
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-ink/25 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <DialogPrimitive.Content
-          aria-label="Search Bower"
-          onKeyDown={onKeyDown}
-          onOpenAutoFocus={(e) => {
-            e.preventDefault()
-            setQuery('')
-            setCursor(0)
-            inputRef.current?.focus()
-          }}
-          className="fixed left-[50%] top-[12vh] z-50 w-full max-w-lg translate-x-[-50%] overflow-hidden rounded-xl border border-line bg-surface shadow-pop duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-[0.98] data-[state=open]:zoom-in-[0.97] data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2"
-        >
+      <AnimatePresence>
+        {open && (
+          <DialogPrimitive.Portal forceMount>
+            <DialogPrimitive.Overlay asChild>
+              <motion.div
+                className="fixed inset-0 z-50 bg-ink/25"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.14 }}
+              />
+            </DialogPrimitive.Overlay>
+            <DialogPrimitive.Content
+              asChild
+              aria-label="Search Bower"
+              onKeyDown={onKeyDown}
+              onOpenAutoFocus={(e) => {
+                e.preventDefault()
+                setQuery('')
+                setCursor(0)
+                inputRef.current?.focus()
+              }}
+            >
+              <motion.div
+                className="fixed left-[50%] top-[12vh] z-50 w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-xl border border-line bg-surface shadow-pop"
+                initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.97, y: -6 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              >
           <DialogPrimitive.Title className="sr-only">Search</DialogPrimitive.Title>
           <div className="flex items-center gap-2.5 border-b border-line px-4">
             <Search className="h-4 w-4 shrink-0 text-ink-faint" />
@@ -199,8 +219,11 @@ export function CommandPalette({ open, onOpenChange, projects, services, orgName
             </span>
             <span>&uarr;&darr; to move &middot; &crarr; to open</span>
           </div>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
+              </motion.div>
+            </DialogPrimitive.Content>
+          </DialogPrimitive.Portal>
+        )}
+      </AnimatePresence>
     </DialogPrimitive.Root>
   )
 }
