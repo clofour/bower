@@ -44,7 +44,7 @@ interface HeaderBarProps {
   teams: TeamEntry[]
   searchData: {
     projects: { id: string; name: string; slug: string; teamName?: string }[]
-    services: { id: string; name: string; slug: string; type: string; projectName: string; projectSlug: string }[]
+    services: { id: string; name: string; slug: string; projectName: string; projectSlug: string }[]
     orgName: string
   }
 }

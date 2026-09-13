@@ -15,7 +15,7 @@ export async function createDeploymentSpec(serviceId: string, environmentId: str
   if (!row) throw new Error('Service configuration was not found.')
   const attached = await db.select().from(sidecars).where(eq(sidecars.serviceConfigId, row.config.id))
   const spec = buildJobSpec({
-    name: jobName || row.service.slug, serviceLabel: row.service.slug, namespace: row.environment.trellisNamespace, type: row.service.type,
+    name: jobName || row.service.slug, serviceLabel: row.service.slug, namespace: row.environment.trellisNamespace,
     image: row.config.image, port: row.config.port ?? undefined, replicas: overrides?.replicas ?? row.config.replicas,
     cpu: row.config.cpu, memory: row.config.memory, healthCheckPath: row.config.healthCheckPath ?? undefined,
     healthCheckType: row.config.healthCheckType ?? undefined, healthCheckCommand: row.config.healthCheckCommand as string[],

@@ -44,12 +44,9 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
         <PageHeading
           title={service.name}
           actions={
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">{service.type}</Badge>
-              <Link href={`/projects/${slug}/services/${serviceSlug}/revisions`}>
-                <Button variant="default" size="sm">Revisions</Button>
-              </Link>
-            </div>
+            <Link href={`/projects/${slug}/services/${serviceSlug}/revisions`}>
+              <Button variant="default" size="sm">Revisions</Button>
+            </Link>
           }
         />
       </div>

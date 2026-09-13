@@ -40,7 +40,6 @@ function jsonField<T>(formData: FormData, key: string, fallback: T): T {
 
 async function executeDeployment(serviceId: string, environmentId: string, triggerType: Trigger, userId?: string | null) {
   const row = await createDeploymentSpec(serviceId, environmentId)
-  if (row.service.type === 'cron') throw new Error('Cron deployments are not yet available in Trellis.')
   if (row.environment.isLocked && triggerType === 'webhook') throw new Error('This environment is locked and requires an administrator.')
   const [previous] = await db.select().from(deployments).where(and(eq(deployments.serviceId, serviceId), eq(deployments.environmentId, environmentId), eq(deployments.status, 'healthy'))).orderBy(desc(deployments.createdAt)).limit(1)
   let jobName = row.service.slug
@@ -89,28 +88,24 @@ export async function createServiceAction(projectSlug: string, formData: FormDat
   const ctx = await getUserOrganization(user.id); if (!ctx) return { error: 'No organization found.' }
   const project = await getProjectBySlug(ctx.org.id, projectSlug); if (!project) return { error: 'Project not found.' }
   const access = await requireProject(project.id); if (access.projectRole !== 'admin') return { error: 'Insufficient permissions.' }
-  const name = String(formData.get('name') ?? '').trim(); const type = String(formData.get('type') ?? '') as 'web' | 'worker' | 'cron' | 'custom'; const image = String(formData.get('image') ?? '').trim()
-  if (!name || !image || !['web', 'worker', 'cron', 'custom'].includes(type)) return { error: 'Name, type, and image are required.' }
+  const name = String(formData.get('name') ?? '').trim(); const image = String(formData.get('image') ?? '').trim()
+  if (!name || !image) return { error: 'Name and image are required.' }
   const slug = slugify(name); const [duplicate] = await db.select().from(services).where(and(eq(services.projectId, project.id), eq(services.slug, slug))).limit(1)
   if (duplicate) return { error: 'A service with this name already exists.' }
-  const template = jsonField<Record<string, unknown>>(formData, 'templateConfig', {})
-  const [service] = await db.insert(services).values({ projectId: project.id, name, slug, type }).returning()
+  const port = Number(formData.get('port')) || null
+  const cpu = Number(formData.get('cpu')) || 100
+  const memory = Number(formData.get('memory')) || 134217728
+  const [service] = await db.insert(services).values({ projectId: project.id, name, slug }).returning()
   const envs = await db.select().from(environments).where(eq(environments.projectId, project.id))
-  const createdConfigs = envs.length ? await db.insert(serviceConfigs).values(envs.map((env) => ({
-    serviceId: service.id, environmentId: env.id, image, port: Number(template.port ?? (type === 'web' ? 8080 : 0)) || null,
-    replicas: Number(template.replicas ?? (type === 'web' ? 2 : env.defaultReplicas)), cpu: Number(template.cpu ?? (env.resourceTier === 'custom' ? 100 : RESOURCE_TIERS[env.resourceTier][0])), memory: Number(template.memory ?? (env.resourceTier === 'custom' ? 134217728 : RESOURCE_TIERS[env.resourceTier][1])),
-    resourceTier: (template.resourceTier ?? env.resourceTier) as 'small' | 'medium' | 'large' | 'xl' | 'custom',
-    deploymentStrategy: (template.deploymentStrategy ?? 'rolling') as 'rolling' | 'recreate' | 'blue_green' | 'canary',
-    healthCheckType: (template.healthCheckType ?? (type === 'web' ? 'http' : undefined)) as 'http' | 'tcp' | 'script' | undefined,
-    healthCheckPath: type === 'web' ? String(template.healthCheckPath ?? '/health') : (typeof template.healthCheckPath === 'string' ? template.healthCheckPath : null),
-    healthCheckCommand: (template.healthCheckCommand ?? []) as string[], healthCheckInterval: Number(template.healthCheckInterval ?? 10), healthCheckTimeout: Number(template.healthCheckTimeout ?? 2), healthCheckThreshold: Number(template.healthCheckThreshold ?? 3),
-    envVars: (template.envVars ?? {}) as Record<string, string>, labels: (template.labels ?? {}) as Record<string, string>, command: typeof template.command === 'string' ? template.command : null,
-    volumes: (template.volumes ?? []) as TrellisVolume[], secretBindings: (template.secretBindings ?? []) as BowerSecretBinding[], rawConfig: template.rawConfig as TrellisJobSpec | undefined,
-    cronSchedule: typeof template.cronSchedule === 'string' ? template.cronSchedule : null, autoRollbackSeconds: Number(template.autoRollbackSeconds ?? 300), canarySteps: (template.canarySteps ?? [10, 25, 50, 100]) as number[],
-  }))).returning() : []
-  const templateSidecars = Array.isArray(template.sidecars) ? template.sidecars as Array<{ name: string; image: string; cpu?: number; memory?: number; port?: number; envVars?: Record<string, string>; command?: string }> : []
-  if (createdConfigs.length && templateSidecars.length) await db.insert(sidecars).values(createdConfigs.flatMap((config) => templateSidecars.map((item) => ({ serviceConfigId: config.id, name: item.name, image: item.image, cpu: item.cpu ?? 100, memory: item.memory ?? 67108864, port: item.port ?? null, envVars: item.envVars ?? {}, command: item.command ?? null }))))
-  await recordAudit({ orgId: ctx.org.id, userId: user.id, action: 'service.created', resourceType: 'service', resourceId: service.id, details: { before: null, after: { name, type, image } } })
+  if (envs.length) await db.insert(serviceConfigs).values(envs.map((env) => ({
+    serviceId: service.id, environmentId: env.id, image, port,
+    replicas: env.defaultReplicas, cpu, memory,
+    resourceTier: env.resourceTier as 'small' | 'medium' | 'large' | 'xl' | 'custom',
+    deploymentStrategy: 'rolling' as const,
+    healthCheckType: (port ? 'http' : undefined) as 'http' | 'tcp' | 'script' | undefined,
+    healthCheckPath: port ? '/health' : null,
+  }))).returning()
+  await recordAudit({ orgId: ctx.org.id, userId: user.id, action: 'service.created', resourceType: 'service', resourceId: service.id, details: { before: null, after: { name, image } } })
   redirect(`/projects/${projectSlug}/services/${slug}`)
 }
 

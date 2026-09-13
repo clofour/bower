@@ -3,24 +3,8 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { getUserOrganization, getProjectBySlug, getServicesByProject } from '@/lib/queries'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Plus, Server, Cpu, Clock, Box } from 'lucide-react'
+import { Server } from 'lucide-react'
 import { CreateServiceDialog } from '@/components/create-service-dialog'
-
-const typeIcons: Record<string, React.ReactNode> = {
-  web: <Server className="h-4 w-4" />,
-  worker: <Cpu className="h-4 w-4" />,
-  cron: <Clock className="h-4 w-4" />,
-  custom: <Box className="h-4 w-4" />,
-}
-
-const typeVariants: Record<string, 'default' | 'secondary' | 'outline'> = {
-  web: 'default',
-  worker: 'secondary',
-  cron: 'outline',
-  custom: 'outline',
-}
 
 export default async function ProjectOverviewPage({
   params,
@@ -66,15 +50,7 @@ export default async function ProjectOverviewPage({
             >
               <Card className="hover:border-brand-500/50 transition-colors">
                 <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">{service.name}</CardTitle>
-                    <Badge variant={typeVariants[service.type] ?? 'outline'}>
-                      <span className="flex items-center gap-1.5">
-                        {typeIcons[service.type]}
-                        {service.type}
-                      </span>
-                    </Badge>
-                  </div>
+                  <CardTitle className="text-base">{service.name}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-xs text-ink-muted">

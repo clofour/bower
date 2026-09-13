@@ -25,7 +25,7 @@ interface CommandPaletteProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   projects: { id: string; name: string; slug: string; teamName?: string }[]
-  services: { id: string; name: string; slug: string; type: string; projectName: string; projectSlug: string }[]
+  services: { id: string; name: string; slug: string; projectName: string; projectSlug: string }[]
   orgName: string
 }
 
@@ -61,7 +61,7 @@ export function CommandPalette({ open, onOpenChange, projects, services, orgName
     const serviceEntries: SearchEntry[] = services.map((s) => ({
       id: s.id,
       label: s.name,
-      hint: `${s.type} service · ${s.projectName}`,
+      hint: `Service · ${s.projectName}`,
       href: `/projects/${s.projectSlug}/services/${s.slug}`,
       kind: 'service',
     }))
