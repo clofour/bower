@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { motion } from 'motion/react'
 import { cn } from '@/lib/utils'
 
 interface TabItem {
@@ -46,7 +47,11 @@ export function ProjectTabs({ slug, tabs }: { slug: string; tabs: TabItem[] }) {
               </span>
             )}
             {isActive && (
-              <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand-500" />
+              <motion.span
+                layoutId={`project-tabs-${slug}`}
+                className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand-500"
+                transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
+              />
             )}
           </Link>
         )

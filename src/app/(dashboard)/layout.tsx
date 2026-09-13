@@ -5,6 +5,7 @@ import { ORG_COOKIE_NAME } from '@/lib/constants'
 import { getUserOrganizations, getUserOrganization, getUserTeams, getProjectsForUser, getServicesForOrg } from '@/lib/queries'
 import { Sidebar } from '@/components/sidebar'
 import { HeaderBar } from '@/components/header-bar'
+import { PageTransition } from '@/components/page-transition'
 import { Toaster } from '@/components/ui/toaster'
 
 export default async function DashboardLayout({
@@ -74,7 +75,9 @@ export default async function DashboardLayout({
           }}
         />
         <main className="min-w-0 flex-1 px-6 py-6 lg:px-8 lg:py-8">
-          <div className="mx-auto max-w-6xl">{children}</div>
+          <div className="mx-auto max-w-6xl">
+            <PageTransition>{children}</PageTransition>
+          </div>
         </main>
       </div>
       <Toaster />
