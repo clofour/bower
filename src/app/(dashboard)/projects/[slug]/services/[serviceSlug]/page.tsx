@@ -3,15 +3,15 @@ import Link from 'next/link'
 import { getCurrentUser } from '@/lib/auth'
 import { getUserOrganization, getProjectBySlug, getServiceBySlug, getServiceConfigsWithEnvironments, getDeploymentsByService, getSidecars } from '@/lib/queries'
 import { PageHeading } from '@/components/page-heading'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Panel, PanelHeader, SectionTitle, KeyValue } from '@/components/ui/panel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Separator } from '@/components/ui/separator'
-import { StatusDot } from '@/components/status'
+import { EmptyState } from '@/components/ui/empty-state'
+import { StatusDot, Chip } from '@/components/status'
 import { DeploymentPoller } from '@/components/deployment-poller'
 import { ServiceActions } from './service-actions'
-import { ArrowLeft, Box, Clock } from 'lucide-react'
+import { ArrowLeft, Box, Rocket } from 'lucide-react'
 
 export default async function ServiceDetailPage({ params }: { params: Promise<{ slug: string; serviceSlug: string }> }) {
   const { slug, serviceSlug } = await params
@@ -53,91 +53,73 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
 
       <div className="space-y-4">
         {configs.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center text-ink-muted">
-              No environment configurations found.
-            </CardContent>
-          </Card>
+          <Panel>
+            <EmptyState
+              icon={<Box className="h-4 w-4" />}
+              title="No configurations"
+              body="No environment configurations found."
+            />
+          </Panel>
         ) : (
           configs.map(({ config, environment }) => (
-            <Card key={config.id}>
-              <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
-                <div className="flex items-center gap-2">
-                  <CardTitle className="text-base">{environment.name}</CardTitle>
-                  {environment.isLocked && <Badge variant="outline">Locked</Badge>}
-                </div>
-                <ServiceActions
-                  serviceId={service.id}
-                  environmentId={environment.id}
-                  isLocked={environment.isLocked}
-                  replicas={config.replicas}
-                />
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm md:grid-cols-4">
-                  <div>
-                    <span className="text-ink-muted">Image</span>
-                    <p className="mt-0.5 truncate font-mono text-xs">{config.image}</p>
+            <Panel key={config.id}>
+              <PanelHeader
+                title={environment.name}
+                action={
+                  <div className="flex items-center gap-2">
+                    {environment.isLocked && (
+                      <Chip tone="warn">Locked</Chip>
+                    )}
+                    <ServiceActions
+                      serviceId={service.id}
+                      environmentId={environment.id}
+                      isLocked={environment.isLocked}
+                      replicas={config.replicas}
+                    />
                   </div>
-                  <div>
-                    <span className="text-ink-muted">Replicas</span>
-                    <p className="mt-0.5">{config.replicas}</p>
-                  </div>
-                  <div>
-                    <span className="text-ink-muted">CPU</span>
-                    <p className="mt-0.5">{config.cpu} MHz</p>
-                  </div>
-                  <div>
-                    <span className="text-ink-muted">Memory</span>
-                    <p className="mt-0.5">{Math.round(config.memory / 1024 / 1024)} MB</p>
-                  </div>
-                  {config.port && (
-                    <div>
-                      <span className="text-ink-muted">Port</span>
-                      <p className="mt-0.5">{config.port}</p>
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-ink-muted">Strategy</span>
-                    <p className="mt-0.5 capitalize">{config.deploymentStrategy.replace(/_/g, ' ')}</p>
-                  </div>
-                  <div>
-                    <span className="text-ink-muted">Tier</span>
-                    <p className="mt-0.5 capitalize">{config.resourceTier}</p>
-                  </div>
+                }
+              />
+              <div className="p-4">
+                <dl className="grid grid-cols-2 gap-x-8 gap-y-1 md:grid-cols-4">
+                  <KeyValue label="Image" mono>{config.image}</KeyValue>
+                  <KeyValue label="Replicas">{config.replicas}</KeyValue>
+                  <KeyValue label="CPU">{config.cpu} MHz</KeyValue>
+                  <KeyValue label="Memory">{Math.round(config.memory / 1024 / 1024)} MB</KeyValue>
+                  {config.port && <KeyValue label="Port">{config.port}</KeyValue>}
+                  <KeyValue label="Strategy">
+                    <span className="capitalize">{config.deploymentStrategy.replace(/_/g, ' ')}</span>
+                  </KeyValue>
+                  <KeyValue label="Tier">
+                    <span className="capitalize">{config.resourceTier}</span>
+                  </KeyValue>
                   {config.healthCheckPath && (
-                    <div>
-                      <span className="text-ink-muted">Health check</span>
-                      <p className="mt-0.5 font-mono text-xs">{config.healthCheckPath}</p>
-                    </div>
+                    <KeyValue label="Health check" mono>{config.healthCheckPath}</KeyValue>
                   )}
                   {config.command && (
-                    <div className="col-span-2">
-                      <span className="text-ink-muted">Command</span>
-                      <p className="mt-0.5 font-mono text-xs">{config.command}</p>
-                    </div>
+                    <KeyValue label="Command" mono>{config.command}</KeyValue>
                   )}
                   {config.cronSchedule && (
-                    <div>
-                      <span className="text-ink-muted">Schedule</span>
-                      <p className="mt-0.5 font-mono text-xs">{config.cronSchedule}</p>
-                    </div>
+                    <KeyValue label="Schedule" mono>{config.cronSchedule}</KeyValue>
                   )}
-                </div>
-              </CardContent>
-            </Card>
+                </dl>
+              </div>
+            </Panel>
           ))
         )}
       </div>
 
-      <Separator />
-
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold">Recent deployments</h3>
+      <div className="space-y-5">
+        <SectionTitle>Recent deployments</SectionTitle>
         {deployments.length === 0 ? (
-          <p className="text-sm text-ink-muted">No deployments yet.</p>
+          <Panel>
+            <EmptyState
+              icon={<Rocket className="h-4 w-4" />}
+              title="No deployments yet"
+              body="Deploy this service to see its history here."
+            />
+          </Panel>
         ) : (
-          <div className="overflow-x-auto">
+          <Panel>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -162,7 +144,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </Panel>
         )}
       </div>
     </div>

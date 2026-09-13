@@ -4,22 +4,18 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
-const tabs = [
-  { label: 'Overview', href: '' },
-  { label: 'Deployments', href: '/deployments' },
-  { label: 'Environments', href: '/environments' },
-  { label: 'Secrets', href: '/secrets' },
-  { label: 'Routes', href: '/routes' },
-  { label: 'Integrations', href: '/integrations' },
-  { label: 'Settings', href: '/settings' },
-]
+interface TabItem {
+  label: string
+  href: string
+  count?: number
+}
 
-export function ProjectTabs({ slug }: { slug: string }) {
+export function ProjectTabs({ slug, tabs }: { slug: string; tabs: TabItem[] }) {
   const pathname = usePathname()
   const base = `/projects/${slug}`
 
   return (
-    <nav className="flex gap-6 border-b">
+    <nav className="flex items-center gap-1 overflow-x-auto scroll-thin">
       {tabs.map((tab) => {
         const href = tab.href ? `${base}${tab.href}` : base
         const isActive =
@@ -32,13 +28,26 @@ export function ProjectTabs({ slug }: { slug: string }) {
             key={tab.label}
             href={href}
             className={cn(
-              'pb-2.5 pt-1 text-sm font-medium border-b-2 -mb-px transition-colors',
-              isActive
-                ? 'border-brand-500 text-ink'
-                : 'border-transparent text-ink-muted hover:text-ink hover:border-ink-muted/50'
+              'relative flex items-center gap-1.5 whitespace-nowrap px-3 py-2.5 text-[13px] font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300',
+              isActive ? 'text-ink' : 'text-ink-muted hover:text-ink',
             )}
           >
-            {tab.label}
+            <span>{tab.label}</span>
+            {typeof tab.count === 'number' && (
+              <span
+                className={cn(
+                  'nums rounded-md px-1.5 py-px text-2xs font-semibold',
+                  isActive
+                    ? 'bg-brand-50 text-brand-700'
+                    : 'bg-sunken text-ink-muted',
+                )}
+              >
+                {tab.count}
+              </span>
+            )}
+            {isActive && (
+              <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand-500" />
+            )}
           </Link>
         )
       })}
