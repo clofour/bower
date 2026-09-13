@@ -67,7 +67,6 @@ export default async function DashboardLayout({
               id: service.id,
               name: service.name,
               slug: service.slug,
-              type: service.type,
               projectName: project.name,
               projectSlug: project.slug,
             })),

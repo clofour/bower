@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogBody, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus } from 'lucide-react'
 
 export function CreateServiceDialog({ projectSlug }: { projectSlug: string }) {
@@ -46,20 +45,6 @@ export function CreateServiceDialog({ projectSlug }: { projectSlug: string }) {
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input id="name" name="name" placeholder="api-server" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="type">Type</Label>
-              <Select name="type" defaultValue="web">
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="web">Web</SelectItem>
-                  <SelectItem value="worker">Worker</SelectItem>
-                  <SelectItem value="cron">Cron</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="image">Image</Label>

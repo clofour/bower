@@ -39,7 +39,6 @@ export interface BowerServiceConfig {
   name: string
   serviceLabel?: string
   namespace: string
-  type: 'web' | 'worker' | 'cron' | 'custom'
   image: string
   port?: number
   replicas: number
@@ -92,7 +91,7 @@ const WORKER_RESTART_WINDOW = 5 * NS_PER_MINUTE
  * submitted to `POST /v1/jobs` (or `/v1/jobs/plan`).
  */
 export function buildJobSpec(config: BowerServiceConfig): TrellisJobSpec {
-  if (config.type === 'custom' && config.rawConfig) {
+  if (config.rawConfig) {
     return { ...config.rawConfig, name: config.name, namespace: config.namespace, task_groups: config.rawConfig.task_groups.map((group) => ({ ...group, labels: { ...group.labels, 'bower/managed': 'true', 'bower/service': config.serviceLabel ?? config.name } })) }
   }
   const primaryTask = buildPrimaryTask(config)
@@ -112,7 +111,6 @@ export function buildJobSpec(config: BowerServiceConfig): TrellisJobSpec {
     tasks,
   }
 
-  // Restart policy — workers and crons get an explicit restart policy
   const restart = buildRestartPolicy(config)
   if (restart) {
     taskGroup.restart = restart
@@ -161,7 +159,6 @@ function buildPrimaryTask(config: BowerServiceConfig): TrellisTask {
     task.secrets = config.secrets.map(buildSecretRef)
   }
 
-  // Networking — web services get host networking + port
   const networking = buildNetworking(config)
   if (networking) {
     task.networking = networking
@@ -223,19 +220,14 @@ function buildSecretRef(binding: BowerSecretBinding): TrellisSecretRef {
 }
 
 function buildNetworking(config: BowerServiceConfig): TrellisNetworking | null {
-  if (config.type !== 'web') {
+  if (config.port === undefined) {
     return null
   }
 
-  const networking: TrellisNetworking = {
+  return {
     mode: 'host',
+    ports: [{ port: config.port }],
   }
-
-  if (config.port !== undefined) {
-    networking.ports = [{ port: config.port }]
-  }
-
-  return networking
 }
 
 function buildHealthCheck(config: BowerServiceConfig): TrellisHealthCheck | null {
@@ -271,15 +263,12 @@ function buildHealthCheck(config: BowerServiceConfig): TrellisHealthCheck | null
 }
 
 function buildRestartPolicy(
-  config: BowerServiceConfig,
+  _config: BowerServiceConfig,
 ): TrellisRestartPolicy | null {
-  if (config.type === 'worker' || config.type === 'cron') {
-    return {
-      max_restarts: WORKER_MAX_RESTARTS,
-      window: WORKER_RESTART_WINDOW,
-    }
+  return {
+    max_restarts: WORKER_MAX_RESTARTS,
+    window: WORKER_RESTART_WINDOW,
   }
-  return null
 }
 
 function buildUpdateStrategy(
