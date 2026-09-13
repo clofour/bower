@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { eq } from 'drizzle-orm'
 import { createHash } from 'node:crypto'
 import { db } from '@/db'
-import { users, organizations, organizationMembers, organizationTokens, instanceTokens } from '@/db/schema'
+import { users, organizations, organizationTokens, instanceTokens } from '@/db/schema'
 import {
   hashPassword,
   verifyPassword,
@@ -119,21 +119,18 @@ export async function registerAction(
       .values({ email: normalizedEmail, name: trimmedName, passwordHash, isInstanceAdmin: true })
       .returning({ id: users.id })
 
-    const allOrgs = await db.select({ id: organizations.id }).from(organizations)
-    for (const org of allOrgs) {
-      await db.insert(organizationMembers).values({
-        orgId: org.id, userId: newUser.id, role: 'owner',
-      })
-    }
-
     await db
       .update(instanceTokens)
       .set({ usedByUserId: newUser.id, usedAt: new Date() })
       .where(eq(instanceTokens.id, instance.id))
 
-    if (allOrgs.length > 0) {
+    // Audit is currently organization-scoped. Record the registration against
+    // the first organization when one exists, without manufacturing an
+    // organization membership for the instance administrator.
+    const [firstOrg] = await db.select({ id: organizations.id }).from(organizations).limit(1)
+    if (firstOrg) {
       await recordAudit({
-        orgId: allOrgs[0].id, userId: newUser.id,
+        orgId: firstOrg.id, userId: newUser.id,
         action: 'user.registered', resourceType: 'user', resourceId: newUser.id,
         details: { name: trimmedName, instanceAdmin: true, tokenPrefix: instance.tokenPrefix },
       })
