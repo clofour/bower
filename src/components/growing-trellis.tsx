@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useId, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useId, useState, useSyncExternalStore } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import { cn } from '@/lib/utils'
 
 const W = 800
@@ -8,7 +9,6 @@ const H = 1000
 const LATTICE_PITCH = 70
 const SAMPLE_STEP = 26
 const GROWTH_RATE = 0.006
-const LATTICE_DUR = 2.1
 
 type Pt = [number, number]
 
@@ -75,6 +75,8 @@ const CORRIDORS: Corridor[] = [
   { cx: 690, height: 0.52, amp: 18, cycles: 2.0, phase: 2.6, drift: -16 },
 ]
 
+const LATTICE_DUR = 2.1
+
 function buildVine(c: Corridor, delay: number, idx: number): Vine {
   const climb = H * c.height
   const n = Math.max(4, Math.round(climb / SAMPLE_STEP))
@@ -140,18 +142,49 @@ const RAIL_N = Math.ceil((W + H) / LATTICE_PITCH)
 const DR = Array.from({ length: RAIL_N }, (_, i) => (i - Math.ceil(H / LATTICE_PITCH)) * LATTICE_PITCH)
 const UR = Array.from({ length: RAIL_N }, (_, i) => i * LATTICE_PITCH)
 
-const EASE = 'cubic-bezier(0.22,1,0.36,1)'
+const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
 const VINE_STROKE = 'hsl(172 33% 57%)'
 const LEAF_FILL = 'hsl(170 33% 74%)'
 
-const KF = `
-@keyframes gt-rail{to{stroke-dashoffset:0}}
-@keyframes gt-grow{to{stroke-dashoffset:0}}
-@keyframes gt-unfurl{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
-@keyframes gt-tendril{from{stroke-dashoffset:1;opacity:0}to{stroke-dashoffset:0;opacity:1}}
+const SWAY_KF = `
 @keyframes gt-sway{0%,100%{transform:rotate(0)}25%{transform:rotate(var(--sw))}50%{transform:rotate(0)}75%{transform:rotate(calc(var(--sw) * -0.7))}}
 @keyframes gt-flutter{0%,100%{transform:rotate(0)}25%{transform:rotate(var(--fl))}50%{transform:rotate(0)}75%{transform:rotate(calc(var(--fl) * -0.8))}}
 `
+
+function LeafGlyph({ index }: { index: number }) {
+  switch (index % 4) {
+    case 0:
+      return (
+        <g transform="translate(8 0) rotate(0)">
+          <path d="M0 0 C 6.5 -8 18.5 -9 24.5 -1 C 18.5 7 6.5 6 0 0 Z" fill={LEAF_FILL} fillOpacity="0.9" />
+          <path d="M3 0 C 10 -1.4 17 -1.8 22.5 -1.4" stroke={VINE_STROKE} strokeOpacity="0.6" strokeWidth={1} fill="none" />
+        </g>
+      )
+    case 1:
+      return (
+        <g fill={LEAF_FILL} fillOpacity="0.85">
+          <circle cx="0" cy="-4" r="2.6" />
+          <circle cx="4" cy="0" r="2.6" />
+          <circle cx="0" cy="4" r="2.6" />
+          <circle cx="-4" cy="0" r="2.6" />
+        </g>
+      )
+    case 2:
+      return (
+        <rect
+          x="-3.6" y="-3.6" width="7.2" height="7.2" rx="1.6"
+          fill="none" stroke={LEAF_FILL} strokeWidth="1.8"
+        />
+      )
+    default:
+      return (
+        <g stroke={LEAF_FILL} strokeWidth="1.8" strokeLinecap="round">
+          <path d="M0 -4.5V4.5" />
+          <path d="M-4.5 0H4.5" />
+        </g>
+      )
+  }
+}
 
 export function GrowingTrellis({ className }: { className?: string }) {
   const id = useId()
@@ -168,41 +201,50 @@ export function GrowingTrellis({ className }: { className?: string }) {
   const serverRM = useCallback(() => false, [])
   const off = useSyncExternalStore(subRM, snapRM, serverRM)
 
-  function anim(name: string, dur: string, delay: number, ease: string, fill = 'forwards') {
-    return off ? undefined : `${name} ${dur} ${ease} ${delay}s ${fill}`
-  }
+  const [phase, setPhase] = useState(0)
+
+  useEffect(() => {
+    if (off) return
+    const timer = window.setInterval(() => setPhase((p) => p + 1), 2600)
+    return () => window.clearInterval(timer)
+  }, [off])
+
+  const grow = (delay: number, dur: number) =>
+    off
+      ? { duration: 0 }
+      : { duration: dur, delay, ease: EASE }
 
   return (
     <div className={cn('pointer-events-none select-none', className)} aria-hidden="true">
-      {!off && <style>{KF}</style>}
+      {!off && <style>{SWAY_KF}</style>}
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMax slice" className="h-full w-full">
+        {/* Lattice grid */}
         <g stroke={LEAF_FILL} strokeOpacity="0.14" strokeWidth="1">
           {DR.map((c, i) => (
-            <line
+            <motion.line
               key={`${id}d${i}`}
               x1={c} y1={0} x2={c + H} y2={H}
               pathLength={1}
-              style={{
-                strokeDasharray: 1,
-                strokeDashoffset: off ? 0 : 1,
-                animation: anim('gt-rail', '1.1s', i * 0.025, EASE),
-              }}
+              strokeDasharray="1"
+              initial={{ strokeDashoffset: off ? 0 : 1 }}
+              animate={{ strokeDashoffset: 0 }}
+              transition={grow(i * 0.025, 1.1)}
             />
           ))}
           {UR.map((c, i) => (
-            <line
+            <motion.line
               key={`${id}u${i}`}
               x1={c} y1={0} x2={c - H} y2={H}
               pathLength={1}
-              style={{
-                strokeDasharray: 1,
-                strokeDashoffset: off ? 0 : 1,
-                animation: anim('gt-rail', '1.1s', 0.15 + i * 0.025, EASE),
-              }}
+              strokeDasharray="1"
+              initial={{ strokeDashoffset: off ? 0 : 1 }}
+              animate={{ strokeDashoffset: 0 }}
+              transition={grow(0.15 + i * 0.025, 1.1)}
             />
           ))}
         </g>
 
+        {/* Vines */}
         {VINES.map((v) => (
           <g
             key={v.id}
@@ -210,68 +252,68 @@ export function GrowingTrellis({ className }: { className?: string }) {
               transformOrigin: `${v.root[0]}px ${v.root[1]}px`,
               transformBox: 'view-box' as const,
               '--sw': `${v.sway}deg`,
-              animation: anim('gt-sway', `${v.swayDur}s`, v.delay + v.dur, 'ease-in-out', 'none'),
-              animationIterationCount: off ? undefined : 'infinite',
+              animation: off ? undefined : `gt-sway ${v.swayDur}s ease-in-out ${v.delay + v.dur}s infinite none`,
             } as React.CSSProperties}
           >
-            <path
+            {/* Vine stem */}
+            <motion.path
               d={v.d}
               fill="none"
               stroke={VINE_STROKE}
               strokeWidth={v.width}
               strokeLinecap="round"
-              style={{
-                strokeDasharray: v.len,
-                strokeDashoffset: off ? 0 : v.len,
-                animation: anim('gt-grow', `${v.dur}s`, v.delay, 'linear'),
-              }}
+              initial={{ pathLength: off ? 1 : 0 }}
+              animate={{ pathLength: 1 }}
+              transition={grow(v.delay, v.dur)}
             />
 
+            {/* Leaves with glyph cycling */}
             {v.leaves.map((lf, li) => {
               const at = v.delay + v.dur * lf.progress + 0.1
               return (
-                <g
+                <motion.g
                   key={`${v.id}l${li}`}
                   style={{
                     transformOrigin: `${lf.x}px ${lf.y}px`,
                     transformBox: 'view-box' as const,
-                    opacity: off ? 1 : 0,
-                    animation: anim('gt-unfurl', '0.5s', at, EASE),
-                  }}
+                    '--fl': `${lf.flutter}deg`,
+                    animation: off ? undefined : `gt-flutter ${lf.flutterDur}s ease-in-out ${at + 0.5}s infinite none`,
+                  } as React.CSSProperties}
+                  initial={off ? { opacity: 0.55 } : { opacity: 0, scale: 0.3 }}
+                  animate={{ opacity: 0.55, scale: 1 }}
+                  transition={off ? { duration: 0 } : { duration: 0.5, delay: at, ease: EASE }}
                 >
-                  <g
-                    style={{
-                      transformOrigin: `${lf.x}px ${lf.y}px`,
-                      transformBox: 'view-box' as const,
-                      '--fl': `${lf.flutter}deg`,
-                      animation: anim('gt-flutter', `${lf.flutterDur}s`, at + 0.5, 'ease-in-out', 'none'),
-                      animationIterationCount: off ? undefined : 'infinite',
-                    } as React.CSSProperties}
-                  >
-                    <g transform={`translate(${lf.x} ${lf.y}) rotate(${lf.angle}) scale(${lf.size})`}>
-                      <path d="M-2 0 L 8 0" stroke={VINE_STROKE} strokeWidth={2.1 / lf.size} strokeLinecap="round" fill="none" />
-                      <path d="M8 0 C 14.5 -8 26 -9 32.5 -1 C 26 8 14.5 7 8 0 Z" fill={LEAF_FILL} fillOpacity="0.9" />
-                      <path d="M11 0 C 18 -1.4 25 -1.8 30.5 -1.4" stroke={VINE_STROKE} strokeOpacity="0.6" strokeWidth={1 / lf.size} fill="none" />
-                    </g>
+                  <g transform={`translate(${lf.x} ${lf.y}) rotate(${lf.angle}) scale(${lf.size})`}>
+                    <path d="M-2 0 L 8 0" stroke={VINE_STROKE} strokeWidth={2.1 / lf.size} strokeLinecap="round" fill="none" />
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.g
+                        key={phase + li}
+                        initial={off ? { opacity: 1 } : { opacity: 0, scale: 0.82 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={off ? { opacity: 1 } : { opacity: 0, scale: 0.9 }}
+                        transition={{ duration: 0.22, ease: EASE }}
+                      >
+                        <LeafGlyph index={phase + li} />
+                      </motion.g>
+                    </AnimatePresence>
                   </g>
-                </g>
+                </motion.g>
               )
             })}
 
+            {/* Tendril at tip */}
             <g transform={`translate(${v.tip[0]} ${v.tip[1]}) rotate(${v.tipAngle}) scale(1 ${v.tipFlip ? -1 : 1})`}>
-              <path
+              <motion.path
                 d="M0 0 C 7.5 -0.5 12.5 -4 14 -8.5 C 15.5 -13.5 11.5 -16.5 7.5 -15 C 4 -13.8 3.5 -10 6.5 -8.8"
                 fill="none"
                 stroke={VINE_STROKE}
                 strokeWidth={v.width}
                 strokeLinecap="round"
                 pathLength={1}
-                style={{
-                  strokeDasharray: 1,
-                  strokeDashoffset: off ? 0 : 1,
-                  opacity: off ? 1 : 0,
-                  animation: anim('gt-tendril', '1.2s', v.delay + v.dur, 'linear'),
-                }}
+                strokeDasharray="1"
+                initial={off ? { strokeDashoffset: 0, opacity: 1 } : { strokeDashoffset: 1, opacity: 0 }}
+                animate={{ strokeDashoffset: 0, opacity: 1 }}
+                transition={off ? { duration: 0 } : { duration: 1.2, delay: v.delay + v.dur, ease: 'linear' }}
               />
             </g>
           </g>

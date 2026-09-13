@@ -1,29 +1,49 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronRight, Search } from 'lucide-react'
 import { CommandPalette } from '@/components/command-palette'
 import { OrgTeamPicker } from '@/components/org-team-picker'
+import { MobileDrawer } from '@/components/mobile-drawer'
 
-const titleMap: Record<string, string> = {
-  '/dashboard': 'Overview',
-  '/projects': 'Projects',
-  '/deployments': 'Deployments',
-  '/status': 'Status',
-  '/settings': 'Settings',
-  '/settings/organization': 'Organization',
-  '/settings/teams': 'Teams',
-  '/settings/cluster': 'Cluster',
-  '/audit': 'Audit log',
-  '/settings/account': 'Account',
+const segmentLabels: Record<string, string> = {
+  dashboard: 'Overview',
+  projects: 'Projects',
+  deployments: 'Deployments',
+  status: 'Status',
+  settings: 'Settings',
+  audit: 'Audit log',
+  organization: 'Organization',
+  teams: 'Teams',
+  cluster: 'Cluster',
+  account: 'Account',
+  services: 'Services',
+  environments: 'Environments',
+  secrets: 'Secrets',
+  routes: 'Routes',
+  integrations: 'Integrations',
+  revisions: 'Revisions',
+  allocations: 'Allocations',
 }
 
-function deriveTitle(pathname: string) {
-  if (titleMap[pathname]) return titleMap[pathname]
+function prettifySlug(slug: string): string {
+  return slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+interface Crumb {
+  label: string
+  href: string
+}
+
+function deriveBreadcrumbs(pathname: string): Crumb[] {
   const segments = pathname.split('/').filter(Boolean)
-  const last = segments[segments.length - 1] || 'Overview'
-  return last.charAt(0).toUpperCase() + last.slice(1).replace(/-/g, ' ')
+  if (segments.length === 0) return [{ label: 'Overview', href: '/dashboard' }]
+  return segments.map((seg, i) => ({
+    label: segmentLabels[seg] ?? prettifySlug(seg),
+    href: '/' + segments.slice(0, i + 1).join('/'),
+  }))
 }
 
 interface OrgEntry {
@@ -47,11 +67,16 @@ interface HeaderBarProps {
     services: { id: string; name: string; slug: string; projectName: string; projectSlug: string }[]
     orgName: string
   }
+  user: {
+    name: string
+    email: string
+    avatarUrl: string | null
+  }
 }
 
-export function HeaderBar({ orgs, currentOrg, teams, searchData }: HeaderBarProps) {
+export function HeaderBar({ orgs, currentOrg, teams, searchData, user }: HeaderBarProps) {
   const pathname = usePathname()
-  const title = deriveTitle(pathname)
+  const crumbs = deriveBreadcrumbs(pathname)
   const [paletteOpen, setPaletteOpen] = useState(false)
 
   useEffect(() => {
@@ -67,13 +92,27 @@ export function HeaderBar({ orgs, currentOrg, teams, searchData }: HeaderBarProp
 
   return (
     <>
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-line bg-canvas/85 px-6 backdrop-blur-md">
+      <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-line bg-canvas/85 px-4 backdrop-blur-md sm:px-6">
+        <MobileDrawer user={user} />
         <div className="flex min-w-0 flex-1 items-center gap-1">
           <OrgTeamPicker orgs={orgs} currentOrg={currentOrg} teams={teams} />
-          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
-          <span className="min-w-0 truncate text-[13px] font-semibold text-ink">
-            {title}
-          </span>
+          {crumbs.map((crumb, i) => (
+            <Fragment key={crumb.href}>
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
+              {i === crumbs.length - 1 ? (
+                <span className="min-w-0 truncate text-[13px] font-semibold text-ink">
+                  {crumb.label}
+                </span>
+              ) : (
+                <Link
+                  href={crumb.href}
+                  className="min-w-0 truncate text-[13px] font-medium text-ink-muted transition-colors hover:text-ink"
+                >
+                  {crumb.label}
+                </Link>
+              )}
+            </Fragment>
+          ))}
         </div>
 
         <button
