@@ -2,19 +2,11 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { getUserOrganization, getProjectBySlug, getServicesByProject } from '@/lib/queries'
-import { Panel, PanelHeader, SectionTitle } from '@/components/ui/panel'
-import { Badge } from '@/components/ui/badge'
+import { Panel, SectionTitle } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { CreateServiceDialog } from '@/components/create-service-dialog'
-import { Server, Cpu, Clock, Box } from 'lucide-react'
-
-const typeIcons: Record<string, React.ReactNode> = {
-  web: <Server className="h-4 w-4" />,
-  worker: <Cpu className="h-4 w-4" />,
-  cron: <Clock className="h-4 w-4" />,
-  custom: <Box className="h-4 w-4" />,
-}
+import { Server, Box } from 'lucide-react'
 
 export default async function ProjectOverviewPage({
   params,
@@ -57,7 +49,7 @@ export default async function ProjectOverviewPage({
                 <div className="flex items-start justify-between gap-4 p-4">
                   <div className="flex min-w-0 items-start gap-3">
                     <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-line bg-sunken text-ink-muted">
-                      {typeIcons[service.type] ?? <Box className="h-4 w-4" />}
+                      <Box className="h-4 w-4" />
                     </span>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -67,9 +59,6 @@ export default async function ProjectOverviewPage({
                         >
                           {service.name}
                         </Link>
-                        <Badge variant="secondary" className="capitalize">
-                          {service.type}
-                        </Badge>
                       </div>
                       <p className="mt-1.5 text-xs text-ink-muted">
                         Created{' '}
