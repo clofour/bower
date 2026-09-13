@@ -2,24 +2,18 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { getUserOrganization, getProjectBySlug, getServicesByProject } from '@/lib/queries'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Panel, PanelHeader, SectionTitle } from '@/components/ui/panel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Plus, Server, Cpu, Clock, Box } from 'lucide-react'
+import { EmptyState } from '@/components/ui/empty-state'
 import { CreateServiceDialog } from '@/components/create-service-dialog'
+import { Server, Cpu, Clock, Box } from 'lucide-react'
 
 const typeIcons: Record<string, React.ReactNode> = {
   web: <Server className="h-4 w-4" />,
   worker: <Cpu className="h-4 w-4" />,
   cron: <Clock className="h-4 w-4" />,
   custom: <Box className="h-4 w-4" />,
-}
-
-const typeVariants: Record<string, 'default' | 'secondary' | 'outline'> = {
-  web: 'default',
-  worker: 'secondary',
-  cron: 'outline',
-  custom: 'outline',
 }
 
 export default async function ProjectOverviewPage({
@@ -40,51 +34,63 @@ export default async function ProjectOverviewPage({
   const services = await getServicesByProject(project.id)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Services</h2>
+        <SectionTitle>Services</SectionTitle>
         <CreateServiceDialog projectSlug={slug} />
       </div>
 
       {services.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Server className="h-10 w-10 text-ink-muted mb-3" />
-            <h3 className="font-medium text-lg">No services yet</h3>
-            <p className="text-sm text-ink-muted mt-1 max-w-sm">
-              Create your first service to start deploying containers with Trellis.
-            </p>
-          </CardContent>
-        </Card>
+        <Panel>
+          <EmptyState
+            icon={<Server className="h-4 w-4" />}
+            title="No services yet"
+            body="Create your first service to start deploying containers with Trellis."
+            action={<CreateServiceDialog projectSlug={slug} />}
+          />
+        </Panel>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ul className="space-y-3">
           {services.map((service) => (
-            <Link
-              key={service.id}
-              href={`/projects/${slug}/services/${service.slug}`}
-              className="block"
-            >
-              <Card className="hover:border-brand-500/50 transition-colors">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">{service.name}</CardTitle>
-                    <Badge variant={typeVariants[service.type] ?? 'outline'}>
-                      <span className="flex items-center gap-1.5">
-                        {typeIcons[service.type]}
-                        {service.type}
-                      </span>
-                    </Badge>
+            <li key={service.id}>
+              <Panel className="transition-[border-color,box-shadow] duration-150 hover:border-line-strong hover:shadow-raised">
+                <div className="flex items-start justify-between gap-4 p-4">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-line bg-sunken text-ink-muted">
+                      {typeIcons[service.type] ?? <Box className="h-4 w-4" />}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link
+                          href={`/projects/${slug}/services/${service.slug}`}
+                          className="rounded text-[14px] font-semibold tracking-tight text-ink underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+                        >
+                          {service.name}
+                        </Link>
+                        <Badge variant="secondary" className="capitalize">
+                          {service.type}
+                        </Badge>
+                      </div>
+                      <p className="mt-1.5 text-xs text-ink-muted">
+                        Created{' '}
+                        {new Date(service.createdAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </p>
+                    </div>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-ink-muted">
-                    Created {new Date(service.createdAt).toLocaleDateString()}
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
+                  <Link href={`/projects/${slug}/services/${service.slug}`}>
+                    <Button variant="default" size="sm">
+                      View service
+                    </Button>
+                  </Link>
+                </div>
+              </Panel>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   )

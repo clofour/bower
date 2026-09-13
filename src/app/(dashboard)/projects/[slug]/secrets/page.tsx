@@ -6,7 +6,7 @@ import {
   getSecretsByProject,
   getEnvironmentsByProject,
 } from '@/lib/queries'
-import { setSecretAction, deleteSecretAction } from '@/lib/actions/operations'
+import { Panel, SectionTitle } from '@/components/ui/panel'
 import {
   Table,
   TableHeader,
@@ -16,7 +16,7 @@ import {
   TableCell,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
 import { KeyRound } from 'lucide-react'
 import { SecretActions } from './secret-actions'
 import { CreateSecretDialog } from './create-secret-dialog'
@@ -51,9 +51,9 @@ export default async function SecretsPage({
   ])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Secrets</h2>
+        <SectionTitle>Secrets</SectionTitle>
         <CreateSecretDialog
           projectId={project.id}
           environments={environments.map((e) => ({ id: e.id, name: e.name }))}
@@ -61,51 +61,51 @@ export default async function SecretsPage({
       </div>
 
       {secrets.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <KeyRound className="h-10 w-10 text-ink-muted mb-3" />
-            <h3 className="font-medium text-lg">No secrets</h3>
-            <p className="text-sm text-ink-muted mt-1">
-              Add secrets to provide sensitive configuration to your services.
-            </p>
-          </CardContent>
-        </Card>
+        <Panel>
+          <EmptyState
+            icon={<KeyRound className="h-4 w-4" />}
+            title="No secrets"
+            body="Add secrets to provide sensitive configuration to your services."
+          />
+        </Panel>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Environment</TableHead>
-              <TableHead>Shared Group</TableHead>
-              <TableHead>Last Rotated</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {secrets.map((row) => (
-              <TableRow key={row.secret.id}>
-                <TableCell className="font-mono text-sm font-medium">
-                  {row.secret.name}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{row.environmentName}</Badge>
-                </TableCell>
-                <TableCell className="text-ink-muted">
-                  {row.sharedName ?? '-'}
-                </TableCell>
-                <TableCell className="text-ink-muted text-sm">
-                  {formatDate(row.secret.lastRotatedAt)}
-                </TableCell>
-                <TableCell className="text-right">
-                  <SecretActions
-                    projectId={project.id}
-                    secretId={row.secret.id}
-                  />
-                </TableCell>
+        <Panel>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Environment</TableHead>
+                <TableHead>Shared Group</TableHead>
+                <TableHead>Last Rotated</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {secrets.map((row) => (
+                <TableRow key={row.secret.id}>
+                  <TableCell className="font-mono text-sm font-medium">
+                    {row.secret.name}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{row.environmentName}</Badge>
+                  </TableCell>
+                  <TableCell className="text-ink-muted">
+                    {row.sharedName ?? '-'}
+                  </TableCell>
+                  <TableCell className="text-ink-muted text-sm">
+                    {formatDate(row.secret.lastRotatedAt)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <SecretActions
+                      projectId={project.id}
+                      secretId={row.secret.id}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Panel>
       )}
     </div>
   )

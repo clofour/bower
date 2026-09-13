@@ -5,6 +5,7 @@ import {
   getProjectBySlug,
   getRoutesByProject,
 } from '@/lib/queries'
+import { Panel, SectionTitle } from '@/components/ui/panel'
 import {
   Table,
   TableHeader,
@@ -14,7 +15,7 @@ import {
   TableCell,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Globe } from 'lucide-react'
 
 const tlsBadgeVariant: Record<string, 'success' | 'secondary' | 'outline'> = {
@@ -41,52 +42,52 @@ export default async function RoutesPage({
   const routes = await getRoutesByProject(project.id)
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Routes</h2>
+    <div className="space-y-5">
+      <SectionTitle>Routes</SectionTitle>
 
       {routes.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Globe className="h-10 w-10 text-ink-muted mb-3" />
-            <h3 className="font-medium text-lg">No routes configured</h3>
-            <p className="text-sm text-ink-muted mt-1">
-              Add a route to expose your services to traffic.
-            </p>
-          </CardContent>
-        </Card>
+        <Panel>
+          <EmptyState
+            icon={<Globe className="h-4 w-4" />}
+            title="No routes configured"
+            body="Add a route to expose your services to traffic."
+          />
+        </Panel>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Domain</TableHead>
-              <TableHead>Path</TableHead>
-              <TableHead>Service</TableHead>
-              <TableHead>Environment</TableHead>
-              <TableHead>Port</TableHead>
-              <TableHead>TLS Mode</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {routes.map((row) => (
-              <TableRow key={row.route.id}>
-                <TableCell className="font-medium">{row.route.domain}</TableCell>
-                <TableCell className="font-mono text-xs text-ink-muted">
-                  {row.route.pathPrefix}
-                </TableCell>
-                <TableCell>{row.serviceName}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{row.environmentName}</Badge>
-                </TableCell>
-                <TableCell>{row.route.port}</TableCell>
-                <TableCell>
-                  <Badge variant={tlsBadgeVariant[row.route.tlsMode] ?? 'outline'}>
-                    {row.route.tlsMode}
-                  </Badge>
-                </TableCell>
+        <Panel>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Domain</TableHead>
+                <TableHead>Path</TableHead>
+                <TableHead>Service</TableHead>
+                <TableHead>Environment</TableHead>
+                <TableHead>Port</TableHead>
+                <TableHead>TLS Mode</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {routes.map((row) => (
+                <TableRow key={row.route.id}>
+                  <TableCell className="font-medium">{row.route.domain}</TableCell>
+                  <TableCell className="font-mono text-xs text-ink-muted">
+                    {row.route.pathPrefix}
+                  </TableCell>
+                  <TableCell>{row.serviceName}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{row.environmentName}</Badge>
+                  </TableCell>
+                  <TableCell>{row.route.port}</TableCell>
+                  <TableCell>
+                    <Badge variant={tlsBadgeVariant[row.route.tlsMode] ?? 'outline'}>
+                      {row.route.tlsMode}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Panel>
       )}
     </div>
   )

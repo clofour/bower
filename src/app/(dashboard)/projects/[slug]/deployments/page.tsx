@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { getUserOrganization, getProjectBySlug, getDeploymentsByProject } from '@/lib/queries'
+import { Panel, PanelHeader, SectionTitle } from '@/components/ui/panel'
 import {
   Table,
   TableHeader,
@@ -12,8 +13,8 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { StatusDot } from '@/components/status'
 import { DeploymentPoller } from '@/components/deployment-poller'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Rocket } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
 
 const activeStatuses = ['pending', 'planning', 'deploying']
 
@@ -57,62 +58,62 @@ export default async function DeploymentsPage({
   )
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Deployment History</h2>
+    <div className="space-y-5">
+      <SectionTitle>Deployment History</SectionTitle>
 
       <DeploymentPoller active={hasActive} />
 
       {rows.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Rocket className="h-10 w-10 text-ink-muted mb-3" />
-            <h3 className="font-medium text-lg">No deployments yet</h3>
-            <p className="text-sm text-ink-muted mt-1">
-              Deploy a service to see its history here.
-            </p>
-          </CardContent>
-        </Card>
+        <Panel>
+          <EmptyState
+            icon={<Rocket className="h-4 w-4" />}
+            title="No deployments yet"
+            body="Deploy a service to see its history here."
+          />
+        </Panel>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Status</TableHead>
-              <TableHead>Service</TableHead>
-              <TableHead>Environment</TableHead>
-              <TableHead>Image</TableHead>
-              <TableHead>Triggered by</TableHead>
-              <TableHead>Strategy</TableHead>
-              <TableHead>Time</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.deployment.id}>
-                <TableCell>
-                  <StatusDot status={row.deployment.status} />
-                </TableCell>
-                <TableCell className="font-medium">{row.serviceName}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{row.environmentName}</Badge>
-                </TableCell>
-                <TableCell className="font-mono text-xs">
-                  {imageShort(row.deployment.imageAfter)}
-                </TableCell>
-                <TableCell className="text-ink-muted">
-                  {row.userName ?? row.deployment.triggerType}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">
-                    {row.deployment.strategy.replace(/_/g, ' ')}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-ink-muted text-sm">
-                  {formatTime(row.deployment.createdAt)}
-                </TableCell>
+        <Panel>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Status</TableHead>
+                <TableHead>Service</TableHead>
+                <TableHead>Environment</TableHead>
+                <TableHead>Image</TableHead>
+                <TableHead>Triggered by</TableHead>
+                <TableHead>Strategy</TableHead>
+                <TableHead>Time</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow key={row.deployment.id}>
+                  <TableCell>
+                    <StatusDot status={row.deployment.status} />
+                  </TableCell>
+                  <TableCell className="font-medium">{row.serviceName}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{row.environmentName}</Badge>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {imageShort(row.deployment.imageAfter)}
+                  </TableCell>
+                  <TableCell className="text-ink-muted">
+                    {row.userName ?? row.deployment.triggerType}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {row.deployment.strategy.replace(/_/g, ' ')}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-ink-muted text-sm">
+                    {formatTime(row.deployment.createdAt)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Panel>
       )}
     </div>
   )
